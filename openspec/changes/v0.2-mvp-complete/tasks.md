@@ -2,13 +2,13 @@
 
 ## W1. `/v1/incidents/active`
 
-- [ ] Create internal API response DTOs and staleness metadata.
-- [ ] Add active-incident filter parsing for `bbox`, `lat`, `lon`, `radius_meters`, `since`, and `until`.
-- [ ] Write failing handler tests for empty response, valid bbox, valid radius, valid time window, and invalid mixed spatial filters.
-- [ ] Add `Store.ListActiveIncidents`.
-- [ ] Wire `GET /v1/incidents/active`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W1): active incidents endpoint`.
+- [x] Create internal API response DTOs and staleness metadata.
+- [x] Add active-incident filter parsing for `bbox`, `lat`, `lon`, `radius_meters`, `since`, and `until`.
+- [x] Write failing handler tests for empty response, valid bbox, valid radius, valid time window, and invalid mixed spatial filters.
+- [x] Add `Store.ListActiveIncidents`.
+- [x] Wire `GET /v1/incidents/active`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W1): active incidents endpoint`.
 
 ## W2. Incident unit and event history writes
 

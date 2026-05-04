@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/abusedmindset/phoenix-feed/internal/api"
 	"github.com/abusedmindset/phoenix-feed/internal/config"
 	"github.com/abusedmindset/phoenix-feed/internal/source/phxfire"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
@@ -42,9 +43,10 @@ func main() {
 	r.Use(middleware.Timeout(15 * time.Second))
 
 	r.Get("/v1/health", healthHandler(st, log))
+	api.RegisterRoutes(r, st, api.Config{DefaultParserVersion: phxfire.ParserVersion}, log)
 
-	// TODO: /v1/incidents/active, /v1/incidents/{source}/{id},
-	// /v1/incidents/history (paid), /v1/geofences (paid).
+	// TODO: /v1/incidents/{source}/{id}, /v1/incidents/history (paid),
+	// /v1/geofences (paid).
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: r}
 	go func() {
@@ -70,15 +72,15 @@ func healthHandler(st *store.Store, log *slog.Logger) http.HandlerFunc {
 		lastSuccess, _ := st.LatestSuccessAt(ctx, phxfire.SourceName)
 
 		body := map[string]any{
-			"ok":            dbOK,
-			"db_reachable":  dbOK,
-			"sources":       map[string]any{
+			"ok":           dbOK,
+			"db_reachable": dbOK,
+			"sources": map[string]any{
 				phxfire.SourceName: map[string]any{
-					"last_success_at":      lastSuccess.Format(time.RFC3339),
+					"last_success_at":       lastSuccess.Format(time.RFC3339),
 					"seconds_since_success": int(time.Since(lastSuccess).Seconds()),
 				},
 			},
-			"server_time":   time.Now().UTC().Format(time.RFC3339),
+			"server_time": time.Now().UTC().Format(time.RFC3339),
 		}
 		status := http.StatusOK
 		if !dbOK {

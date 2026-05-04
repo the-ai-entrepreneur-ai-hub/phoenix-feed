@@ -52,12 +52,12 @@
 
 ## W5. Janitor raw JSONB retention
 
-- [ ] Add store method to null old `raw` and set `raw_dropped_at`.
-- [ ] Add store method for `VACUUM ANALYZE incidents`.
-- [ ] Write failing retention cutoff tests where practical.
-- [ ] Wire `cmd/janitor` sweep and logging.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W5): raw retention janitor`.
+- [x] Add store method to null old `raw` and set `raw_dropped_at`.
+- [x] Add store method for `VACUUM ANALYZE incidents`.
+- [x] Write failing retention cutoff tests where practical.
+- [x] Wire `cmd/janitor` sweep and logging.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W5): raw retention janitor`.
 
 ## W4. Static web client
 

@@ -48,14 +48,21 @@ func main() {
 	}
 }
 
-func runSweep(_ context.Context, _ *store.Store, _ config.Config, log *slog.Logger) {
-	// TODO:
-	//   - UPDATE incidents SET raw=NULL, raw_dropped_at=NOW()
-	//     WHERE raw IS NOT NULL AND last_seen_at < NOW() - $RAW_RETENTION;
-	//   - Archive cleared incidents older than 30 days to a cold partition
-	//     (or just delete; design decision deferred).
-	//   - Vacuum / analyze if necessary.
-	log.Info("janitor sweep (todo)")
+func runSweep(ctx context.Context, st *store.Store, cfg config.Config, log *slog.Logger) {
+	sweepCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	now := time.Now().UTC()
+	dropped, err := st.DropRawOlderThan(sweepCtx, now, cfg.RawRetention)
+	if err != nil {
+		log.Error("drop old raw json", "err", err)
+		return
+	}
+	if err := st.VacuumAnalyzeIncidents(sweepCtx); err != nil {
+		log.Error("vacuum incidents", "err", err)
+		return
+	}
+	log.Info("janitor sweep", "raw_rows_dropped", dropped, "raw_retention", cfg.RawRetention)
 }
 
 func fatal(msg string, err error) {

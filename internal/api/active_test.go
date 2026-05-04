@@ -18,6 +18,11 @@ type fakeStore struct {
 	activeResult store.ActiveIncidentsResult
 	activeErr    error
 
+	detailSource     string
+	detailIncidentID string
+	detailResult     store.IncidentDetailResult
+	detailErr        error
+
 	pingErr      error
 	sourceHealth []store.SourceHealth
 	healthErr    error
@@ -34,6 +39,12 @@ func (f *fakeStore) Ping(_ context.Context) error {
 
 func (f *fakeStore) SourceHealth(_ context.Context, _ []string) ([]store.SourceHealth, error) {
 	return f.sourceHealth, f.healthErr
+}
+
+func (f *fakeStore) GetIncidentDetail(_ context.Context, source, incidentID string) (store.IncidentDetailResult, error) {
+	f.detailSource = source
+	f.detailIncidentID = incidentID
+	return f.detailResult, f.detailErr
 }
 
 func TestActiveIncidentsEmptyResponseIncludesMeta(t *testing.T) {

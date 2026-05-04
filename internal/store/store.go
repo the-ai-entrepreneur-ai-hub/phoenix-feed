@@ -70,6 +70,48 @@ type ActiveIncidentsResult struct {
 	Incidents []ActiveIncident `json:"incidents"`
 }
 
+type IncidentDetail struct {
+	Source       string       `json:"source"`
+	IncidentID   string       `json:"incident_id"`
+	NatureCode   string       `json:"nature_code,omitempty"`
+	NatureDesc   string       `json:"nature_desc,omitempty"`
+	Units        []model.Unit `json:"units,omitempty"`
+	Channel      string       `json:"channel,omitempty"`
+	SymbolCode   string       `json:"symbol_code,omitempty"`
+	LocationText string       `json:"location_text,omitempty"`
+	Lon          float64      `json:"lon"`
+	Lat          float64      `json:"lat"`
+	IncidentDate time.Time    `json:"incident_date"`
+	ReceivedAt   time.Time    `json:"received_at"`
+	LastSeenAt   time.Time    `json:"last_seen_at"`
+	ClearedAt    *time.Time   `json:"cleared_at,omitempty"`
+	ReopenCount  int          `json:"reopen_count"`
+}
+
+type UnitObservation struct {
+	Unit            string    `json:"unit"`
+	Status          string    `json:"status"`
+	FirstObservedAt time.Time `json:"first_observed_at"`
+	LastObservedAt  time.Time `json:"last_observed_at"`
+	FirstPollID     int64     `json:"first_poll_id"`
+	LastPollID      int64     `json:"last_poll_id"`
+}
+
+type IncidentEvent struct {
+	ID         int64           `json:"id"`
+	EventType  string          `json:"event_type"`
+	OccurredAt time.Time       `json:"occurred_at"`
+	PollID     *int64          `json:"poll_id,omitempty"`
+	Delta      json.RawMessage `json:"delta,omitempty"`
+}
+
+type IncidentDetailResult struct {
+	Meta        StalenessMeta     `json:"meta"`
+	Incident    *IncidentDetail   `json:"incident"`
+	UnitHistory []UnitObservation `json:"unit_history"`
+	Events      []IncidentEvent   `json:"events"`
+}
+
 type CanaryHealth struct {
 	CheckedAt     *time.Time
 	Passed        *bool
@@ -215,6 +257,135 @@ func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) 
 		DataAgeSeconds:      &age,
 		ParserVersion:       parserVersion,
 	}, nil
+}
+
+// GetIncidentDetail returns one incident with observed unit and event history.
+func (s *Store) GetIncidentDetail(ctx context.Context, source, incidentID string) (IncidentDetailResult, error) {
+	meta, err := s.activeStalenessMeta(ctx)
+	if err != nil {
+		return IncidentDetailResult{}, err
+	}
+
+	incident, err := s.getIncident(ctx, source, incidentID)
+	if err != nil {
+		return IncidentDetailResult{}, err
+	}
+	if incident == nil {
+		return IncidentDetailResult{Meta: meta}, nil
+	}
+
+	units, err := s.getUnitHistory(ctx, source, incidentID)
+	if err != nil {
+		return IncidentDetailResult{}, err
+	}
+	events, err := s.getIncidentEvents(ctx, source, incidentID)
+	if err != nil {
+		return IncidentDetailResult{}, err
+	}
+
+	return IncidentDetailResult{
+		Meta:        meta,
+		Incident:    incident,
+		UnitHistory: units,
+		Events:      events,
+	}, nil
+}
+
+func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*IncidentDetail, error) {
+	const q = `
+		SELECT source, incident_id, nature_code, nature_desc, units, channel,
+		       symbol_code, location_text, ST_X(geom), ST_Y(geom), incident_date,
+		       received_at, last_seen_at, cleared_at, reopen_count
+		FROM incidents
+		WHERE source = $1 AND incident_id = $2`
+
+	var inc IncidentDetail
+	var natureCode, natureDesc, channel, symbolCode, locationText sql.NullString
+	var lon, lat sql.NullFloat64
+	var clearedAt sql.NullTime
+	var unitsBytes []byte
+	err := s.pool.QueryRow(ctx, q, source, incidentID).Scan(
+		&inc.Source, &inc.IncidentID, &natureCode, &natureDesc, &unitsBytes, &channel,
+		&symbolCode, &locationText, &lon, &lat, &inc.IncidentDate,
+		&inc.ReceivedAt, &inc.LastSeenAt, &clearedAt, &inc.ReopenCount,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get incident %s/%s: %w", source, incidentID, err)
+	}
+
+	inc.NatureCode = nullString(natureCode)
+	inc.NatureDesc = nullString(natureDesc)
+	inc.Channel = nullString(channel)
+	inc.SymbolCode = nullString(symbolCode)
+	inc.LocationText = nullString(locationText)
+	inc.Lon = nullFloat(lon)
+	inc.Lat = nullFloat(lat)
+	if clearedAt.Valid {
+		inc.ClearedAt = &clearedAt.Time
+	}
+	if len(unitsBytes) > 0 {
+		if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
+			return nil, fmt.Errorf("decode incident units %s/%s: %w", source, incidentID, err)
+		}
+	}
+	return &inc, nil
+}
+
+func (s *Store) getUnitHistory(ctx context.Context, source, incidentID string) ([]UnitObservation, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT unit, status, first_observed_at, last_observed_at, first_poll_id, last_poll_id
+		FROM incident_units
+		WHERE source = $1 AND incident_id = $2
+		ORDER BY first_observed_at ASC, id ASC`, source, incidentID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query unit history %s/%s: %w", source, incidentID, err)
+	}
+	defer rows.Close()
+
+	out := []UnitObservation{}
+	for rows.Next() {
+		var row UnitObservation
+		if err := rows.Scan(&row.Unit, &row.Status, &row.FirstObservedAt, &row.LastObservedAt, &row.FirstPollID, &row.LastPollID); err != nil {
+			return nil, err
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) getIncidentEvents(ctx context.Context, source, incidentID string) ([]IncidentEvent, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, event_type, occurred_at, poll_id, delta
+		FROM incident_events
+		WHERE source = $1 AND incident_id = $2
+		ORDER BY occurred_at ASC, id ASC`, source, incidentID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query incident events %s/%s: %w", source, incidentID, err)
+	}
+	defer rows.Close()
+
+	out := []IncidentEvent{}
+	for rows.Next() {
+		var row IncidentEvent
+		var pollID sql.NullInt64
+		var delta []byte
+		if err := rows.Scan(&row.ID, &row.EventType, &row.OccurredAt, &pollID, &delta); err != nil {
+			return nil, err
+		}
+		if pollID.Valid {
+			row.PollID = &pollID.Int64
+		}
+		if len(delta) > 0 {
+			row.Delta = json.RawMessage(delta)
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
 }
 
 // UpsertIncident applies a single observed incident, recording the

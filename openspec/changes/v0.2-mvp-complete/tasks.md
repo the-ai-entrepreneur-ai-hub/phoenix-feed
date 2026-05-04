@@ -33,12 +33,12 @@
 
 ## W6. `/v1/incidents/{source}/{incident_id}`
 
-- [ ] Add detail DTOs for incident, unit history, and event history.
-- [ ] Add store query for one incident plus histories.
-- [ ] Write failing handler tests for found and missing incidents.
-- [ ] Wire `GET /v1/incidents/{source}/{incident_id}`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W6): incident detail endpoint`.
+- [x] Add detail DTOs for incident, unit history, and event history.
+- [x] Add store query for one incident plus histories.
+- [x] Write failing handler tests for found and missing incidents.
+- [x] Wire `GET /v1/incidents/{source}/{incident_id}`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W6): incident detail endpoint`.
 
 ## W3. Contract canary assertions
 

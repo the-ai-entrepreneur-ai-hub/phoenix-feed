@@ -14,6 +14,7 @@ import (
 
 // Store is the database surface needed by the API handlers.
 type Store interface {
+	GetIncidentDetail(context.Context, string, string) (store.IncidentDetailResult, error)
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
 	Ping(context.Context) error
 	SourceHealth(context.Context, []string) ([]store.SourceHealth, error)
@@ -38,5 +39,6 @@ func Router(st Store, cfg Config, log *slog.Logger) http.Handler {
 // RegisterRoutes adds API routes to an existing chi router.
 func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	r.Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
 	r.Get("/v1/health", healthHandler(st, cfg, log))
 }

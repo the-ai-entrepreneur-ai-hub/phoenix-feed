@@ -34,6 +34,18 @@ const (
 	defaultTimeout = 15 * time.Second
 )
 
+var expectedFields = []string{
+	"OBJECTID",
+	"Incident",
+	"Nature",
+	"NatureDesc",
+	"Units",
+	"Channel",
+	"SymbolCode",
+	"Date",
+	"GenLocInfo",
+}
+
 // Client is the Source.
 type Client struct {
 	queryURL   string
@@ -46,6 +58,18 @@ func New() *Client {
 		queryURL:   defaultQueryURL,
 		httpClient: &http.Client{Timeout: defaultTimeout},
 	}
+}
+
+// DefaultQueryURL returns the production ArcGIS query URL.
+func DefaultQueryURL() string {
+	return defaultQueryURL
+}
+
+// ExpectedFields returns the Phoenix Fire fields the parser requires.
+func ExpectedFields() []string {
+	out := make([]string, len(expectedFields))
+	copy(out, expectedFields)
+	return out
 }
 
 // WithURL overrides the query URL — useful for tests pointing at fixtures.
@@ -102,7 +126,7 @@ func (c *Client) Poll(ctx context.Context) model.PollResult {
 	sum := sha256.Sum256(body)
 	res.PayloadSHA256 = hex.EncodeToString(sum[:])
 
-	incidents, err := parseFeatures(body)
+	incidents, err := ParseFeatures(body)
 	if err != nil {
 		res.Err = fmt.Errorf("parse: %w", err)
 		return res
@@ -115,15 +139,15 @@ func (c *Client) Poll(ctx context.Context) model.PollResult {
 type rawResponse struct {
 	Features []struct {
 		Attributes struct {
-			OBJECTID    int64  `json:"OBJECTID"`
-			Incident    string `json:"Incident"`
-			Nature      string `json:"Nature"`
-			NatureDesc  string `json:"NatureDesc"`
-			Units       string `json:"Units"`
-			Channel     string `json:"Channel"`
-			SymbolCode  string `json:"SymbolCode"`
-			Date        int64  `json:"Date"` // epoch ms
-			GenLocInfo  string `json:"GenLocInfo"`
+			OBJECTID   int64  `json:"OBJECTID"`
+			Incident   string `json:"Incident"`
+			Nature     string `json:"Nature"`
+			NatureDesc string `json:"NatureDesc"`
+			Units      string `json:"Units"`
+			Channel    string `json:"Channel"`
+			SymbolCode string `json:"SymbolCode"`
+			Date       int64  `json:"Date"` // epoch ms
+			GenLocInfo string `json:"GenLocInfo"`
 		} `json:"attributes"`
 		Geometry struct {
 			X float64 `json:"x"`
@@ -136,6 +160,13 @@ type rawResponse struct {
 // Returns an error on JSON parse failure; per-feature errors are skipped with
 // the rest of the batch returned.
 func parseFeatures(body []byte) ([]model.Incident, error) {
+	return ParseFeatures(body)
+}
+
+// ParseFeatures decodes ESRI JSON and normalizes each feature into model.Incident.
+// It is exported so the contract canary can verify the live payload against the
+// production parser.
+func ParseFeatures(body []byte) ([]model.Incident, error) {
 	var raw rawResponse
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, err

@@ -126,6 +126,19 @@ type SourceHealth struct {
 	Canary        *CanaryHealth
 }
 
+type ContractCanaryResult struct {
+	Source         string          `json:"source"`
+	CheckedAt      time.Time       `json:"checked_at"`
+	ExpectedFields []string        `json:"expected_fields"`
+	ActualFields   []string        `json:"actual_fields"`
+	OutputSR       *int            `json:"output_sr,omitempty"`
+	FeatureCount   int             `json:"feature_count"`
+	GeomPlausible  bool            `json:"geom_plausible"`
+	Drift          json.RawMessage `json:"drift,omitempty"`
+	Passed         bool            `json:"passed"`
+	ParserVersion  string          `json:"parser_version"`
+}
+
 func New(ctx context.Context, dsn string) (*Store, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -521,6 +534,47 @@ func (s *Store) SourceHealth(ctx context.Context, sources []string) ([]SourceHea
 		out = append(out, row)
 	}
 	return out, nil
+}
+
+// FeatureCountBaseline returns average successful-poll feature count since the
+// provided time. The bool is false when there is no baseline yet.
+func (s *Store) FeatureCountBaseline(ctx context.Context, source string, since time.Time) (float64, bool, error) {
+	const q = `
+		SELECT AVG(feature_count)::float8
+		FROM source_polls
+		WHERE source = $1
+		  AND success = TRUE
+		  AND feature_count IS NOT NULL
+		  AND started_at >= $2`
+	var avg sql.NullFloat64
+	if err := s.pool.QueryRow(ctx, q, source, since).Scan(&avg); err != nil {
+		return 0, false, fmt.Errorf("feature count baseline %s: %w", source, err)
+	}
+	if !avg.Valid {
+		return 0, false, nil
+	}
+	return avg.Float64, true, nil
+}
+
+// RecordCanary persists one contract canary result.
+func (s *Store) RecordCanary(ctx context.Context, result ContractCanaryResult) error {
+	const q = `
+		INSERT INTO contract_canary (
+			source, checked_at, expected_fields, actual_fields, output_sr,
+			feature_count, geom_plausible, drift, passed, parser_version
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`
+	var drift any
+	if len(result.Drift) > 0 {
+		drift = string(result.Drift)
+	}
+	_, err := s.pool.Exec(ctx, q,
+		result.Source, result.CheckedAt, result.ExpectedFields, result.ActualFields, result.OutputSR,
+		result.FeatureCount, result.GeomPlausible, drift, result.Passed, result.ParserVersion,
+	)
+	if err != nil {
+		return fmt.Errorf("record canary %s: %w", result.Source, err)
+	}
+	return nil
 }
 
 // Ping is a thin wrapper for the API health endpoint.

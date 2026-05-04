@@ -42,13 +42,13 @@
 
 ## W3. Contract canary assertions
 
-- [ ] Export Phoenix parser helpers needed by canary.
-- [ ] Add canary result model and store persistence helpers.
-- [ ] Write failing canary tests for success, missing field, bad geometry, bad date, and parser failure.
-- [ ] Implement all six architecture section 7 checks.
-- [ ] Wire `cmd/canary` to config, store, checker, and failed-check `log.Error`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W3): contract canary checks`.
+- [x] Export Phoenix parser helpers needed by canary.
+- [x] Add canary result model and store persistence helpers.
+- [x] Write failing canary tests for success, missing field, bad geometry, bad date, and parser failure.
+- [x] Implement all six architecture section 7 checks.
+- [x] Wire `cmd/canary` to config, store, checker, and failed-check `log.Error`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W3): contract canary checks`.
 
 ## W5. Janitor raw JSONB retention
 

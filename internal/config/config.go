@@ -1,0 +1,65 @@
+// Package config loads runtime configuration from environment variables.
+// Keep it boring: no YAML, no flags, no precedence rules. Twelve-factor.
+package config
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"time"
+)
+
+type Config struct {
+	DatabaseURL     string        // postgres://...
+	PollInterval    time.Duration // ingester base cadence
+	PollJitter      time.Duration // ± jitter applied each cycle
+	HTTPAddr        string        // api bind address
+	ClearAfterMisses int          // consecutive successful polls absent before clearing
+	RawRetention    time.Duration // janitor: drop raw JSONB after this age
+	LogLevel        string        // "debug" | "info" | "warn" | "error"
+}
+
+func Load() (Config, error) {
+	c := Config{
+		DatabaseURL:      env("DATABASE_URL", "postgres://localhost:5432/phoenix_feed?sslmode=disable"),
+		HTTPAddr:         env("HTTP_ADDR", ":8080"),
+		LogLevel:         env("LOG_LEVEL", "info"),
+		ClearAfterMisses: envInt("CLEAR_AFTER_MISSES", 5),
+		PollInterval:     envDuration("POLL_INTERVAL", 60*time.Second),
+		PollJitter:       envDuration("POLL_JITTER", 10*time.Second),
+		RawRetention:     envDuration("RAW_RETENTION", 30*24*time.Hour),
+	}
+
+	if c.PollJitter >= c.PollInterval {
+		return c, fmt.Errorf("POLL_JITTER (%s) must be less than POLL_INTERVAL (%s)", c.PollJitter, c.PollInterval)
+	}
+	if c.ClearAfterMisses < 1 {
+		return c, fmt.Errorf("CLEAR_AFTER_MISSES must be >= 1")
+	}
+	return c, nil
+}
+
+func env(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func envInt(key string, fallback int) int {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
+func envDuration(key string, fallback time.Duration) time.Duration {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return fallback
+}

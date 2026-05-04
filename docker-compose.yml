@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: phxfeed_db
+    environment:
+      POSTGRES_USER: phoenix
+      POSTGRES_PASSWORD: phoenix
+      POSTGRES_DB: phoenix_feed
+    ports:
+      - "5432:5432"
+    volumes:
+      - phxfeed_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phoenix -d phoenix_feed"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  phxfeed_data:

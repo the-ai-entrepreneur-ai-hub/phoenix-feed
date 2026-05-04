@@ -66,7 +66,10 @@ func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
 	if err != nil {
 		m.log.Error("sweep cleared", "err", err)
 	} else if len(cleared) > 0 {
-		m.log.Info("incidents cleared", "source", r.Source, "count", len(cleared), "ids", cleared)
+		if err := m.store.RecordClearedEvents(ctx, cleared, pollID); err != nil {
+			m.log.Error("record cleared events", "err", err)
+		}
+		m.log.Info("incidents cleared", "source", r.Source, "count", len(cleared), "ids", clearedIncidentIDs(cleared))
 	}
 
 	m.log.Info("poll applied",
@@ -76,6 +79,14 @@ func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
 		"latency_ms", r.LatencyMS,
 		"poll_id", pollID)
 	return nil
+}
+
+func clearedIncidentIDs(cleared []store.ClearedIncident) []string {
+	ids := make([]string, 0, len(cleared))
+	for _, item := range cleared {
+		ids = append(ids, item.IncidentID)
+	}
+	return ids
 }
 
 func errString(err error) string {

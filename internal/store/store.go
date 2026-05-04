@@ -206,43 +206,7 @@ func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) 
 // (source, incident_id) row and resetting any clearing state. Called by the
 // lifecycle layer for each feature observed in a successful poll.
 func (s *Store) UpsertIncident(ctx context.Context, inc model.Incident, pollID int64, observedAt time.Time) error {
-	unitsJSON, _ := json.Marshal(inc.Units)
-
-	const q = `
-		INSERT INTO incidents (
-			source, incident_id, nature_code, nature_desc, units, channel,
-			symbol_code, location_text, geom, incident_date,
-			received_at, last_seen_at, last_seen_poll_id, raw
-		) VALUES (
-			$1,$2,$3,$4,$5::jsonb,$6,
-			$7,$8, ST_SetSRID(ST_MakePoint($9,$10),4326), $11,
-			$12,$12,$13,$14::jsonb
-		)
-		ON CONFLICT (source, incident_id) DO UPDATE SET
-			nature_code       = EXCLUDED.nature_code,
-			nature_desc       = EXCLUDED.nature_desc,
-			units             = EXCLUDED.units,
-			channel           = EXCLUDED.channel,
-			symbol_code       = EXCLUDED.symbol_code,
-			location_text     = EXCLUDED.location_text,
-			geom              = EXCLUDED.geom,
-			incident_date     = EXCLUDED.incident_date,
-			last_seen_at      = EXCLUDED.last_seen_at,
-			last_seen_poll_id = EXCLUDED.last_seen_poll_id,
-			missing_since     = NULL,
-			cleared_at        = NULL,
-			reopen_count      = CASE
-				WHEN incidents.cleared_at IS NOT NULL THEN incidents.reopen_count + 1
-				ELSE incidents.reopen_count
-			END,
-			raw               = COALESCE(EXCLUDED.raw, incidents.raw)`
-
-	_, err := s.pool.Exec(ctx, q,
-		inc.Source, inc.IncidentID, inc.NatureCode, inc.NatureDesc, string(unitsJSON), inc.Channel,
-		inc.SymbolCode, inc.LocationText, inc.Lon, inc.Lat, inc.IncidentDate,
-		observedAt, pollID, string(inc.Raw),
-	)
-	return err
+	return s.upsertIncidentWithHistory(ctx, inc, pollID, observedAt)
 }
 
 // MarkMissing flips on missing_since for incidents in this source that were
@@ -259,9 +223,9 @@ func (s *Store) MarkMissing(ctx context.Context, source string, observedAt time.
 }
 
 // SweepCleared sets cleared_at for incidents that have been missing through
-// at least minMisses consecutive successful polls. Returns the IDs of cleared
+// at least minMisses consecutive successful polls. Returns the cleared
 // incidents so the caller can emit incident_events.
-func (s *Store) SweepCleared(ctx context.Context, source string, minMisses int) ([]string, error) {
+func (s *Store) SweepCleared(ctx context.Context, source string, minMisses int) ([]ClearedIncident, error) {
 	const q = `
 		WITH miss_counts AS (
 			SELECT i.incident_id,
@@ -278,7 +242,7 @@ func (s *Store) SweepCleared(ctx context.Context, source string, minMisses int) 
 		WHERE i.source = $1
 		  AND i.incident_id = m.incident_id
 		  AND m.misses >= $2
-		RETURNING i.incident_id`
+		RETURNING i.incident_id, i.cleared_at`
 
 	rows, err := s.pool.Query(ctx, q, source, minMisses)
 	if err != nil {
@@ -286,15 +250,16 @@ func (s *Store) SweepCleared(ctx context.Context, source string, minMisses int) 
 	}
 	defer rows.Close()
 
-	var ids []string
+	var cleared []ClearedIncident
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var item ClearedIncident
+		if err := rows.Scan(&item.IncidentID, &item.ClearedAt); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		item.Source = source
+		cleared = append(cleared, item)
 	}
-	return ids, rows.Err()
+	return cleared, rows.Err()
 }
 
 // LatestSuccessAt is exposed in API responses so clients can detect staleness.

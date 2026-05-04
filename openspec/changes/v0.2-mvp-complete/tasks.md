@@ -12,14 +12,14 @@
 
 ## W2. Incident unit and event history writes
 
-- [ ] Add unit delta model and diff helper.
-- [ ] Write failing tests for unit add, remove, status change, and unchanged repeat.
-- [ ] Make `Store.UpsertIncident` transactional.
-- [ ] Extend or insert `incident_units` rows during upsert.
-- [ ] Write `incident_events` rows for `created`, `updated`, and `reopened`.
-- [ ] Write cleared events after `SweepCleared`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W2): incident unit history`.
+- [x] Add unit delta model and diff helper.
+- [x] Write failing tests for unit add, remove, status change, and unchanged repeat.
+- [x] Make `Store.UpsertIncident` transactional.
+- [x] Extend or insert `incident_units` rows during upsert.
+- [x] Write `incident_events` rows for `created`, `updated`, and `reopened`.
+- [x] Write cleared events after `SweepCleared`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W2): incident unit history`.
 
 ## W8. `/v1/health` upgrade
 

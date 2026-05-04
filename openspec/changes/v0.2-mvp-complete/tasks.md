@@ -80,11 +80,11 @@
 
 ## Closeout
 
-- [ ] Update `README.md` with v0.2 status, commands, API routes, and web instructions.
-- [ ] Add `docs/v0.2-summary.md`.
-- [ ] Run `go vet ./...`.
-- [ ] Run `go test ./...`.
-- [ ] Run `go build ./...`.
+- [x] Update `README.md` with v0.2 status, commands, API routes, and web instructions.
+- [x] Add `docs/v0.2-summary.md`.
+- [x] Run `go vet ./...`.
+- [x] Run `go test ./...`.
+- [x] Run `go build ./...`.
 - [ ] Run `make db-up && make db-init`.
 - [ ] Run ingester + API and curl `/v1/incidents/active`.
 - [ ] Confirm `web/index.html` works against `localhost:8080`.

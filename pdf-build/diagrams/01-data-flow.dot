@@ -1,0 +1,45 @@
+digraph dataflow {
+  rankdir=LR;
+  bgcolor="white";
+  splines=ortho;
+  nodesep=0.45;
+  ranksep=0.7;
+
+  node [shape=box, style="solid", fontname="Times-Roman", fontsize=10, color=black, fontcolor=black];
+  edge [color=black, fontname="Times-Italic", fontsize=8];
+
+  subgraph cluster_phoenix {
+    label="City of Phoenix (public infrastructure)";
+    fontname="Times-Italic";
+    fontsize=10;
+    style=dashed;
+    color=black;
+
+    fire  [label="Phoenix Fire\nActive Incidents Dashboard\nhtms.phoenix.gov\n→ mapportal.phoenix.gov", peripheries=2];
+    open  [label="Phoenix Open Data\nphoenixopendata.com\n(daily Calls for Service)", peripheries=2];
+  }
+
+  subgraph cluster_us {
+    label="our backend";
+    fontname="Times-Italic";
+    fontsize=10;
+    style=solid;
+    color=black;
+
+    poll  [label="Poller\n60s cadence\nbackoff on 5xx"];
+    norm  [label="Normalizer\nschema map\nPII redaction"];
+    cache [label="Cache (Postgres)\nreceived_at + incident_date\n7–30d hot, archive cold"];
+    api   [label="Our API\nrate limited\nauth keys"];
+  }
+
+  user [label="End user\n(web / mobile)", shape=box];
+
+  fire -> poll [label="HTTPS poll"];
+  open -> poll [label="daily CSV"];
+  poll -> norm;
+  norm -> cache;
+  cache -> api;
+  api -> user;
+
+  user -> fire [label="never (by design)", style=dashed, color="#888", fontcolor="#666"];
+}

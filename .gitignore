@@ -1,0 +1,39 @@
+# Build artifacts
+pdf-build/output/
+pdf-build/svg/
+pdf-build/_combined.html
+pdf-build/_combined.md
+pdf-build/_letter_template.html
+pdf-build/_letter_template.md
+pdf-build/_architecture.html
+pdf-build/_architecture.md
+
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Env
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

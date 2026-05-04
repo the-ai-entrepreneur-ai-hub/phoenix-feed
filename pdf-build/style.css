@@ -1,0 +1,319 @@
+/* phoenix-feed — 1990s technical-documentation stylesheet
+   Aesthetic targets: RFC documents, Bell Labs papers, Knuth-era TeX */
+
+@page {
+  size: A4;
+  margin: 1in 1.25in 1.1in 1.25in;
+  @bottom-center {
+    content: counter(page);
+    font-family: 'Times New Roman', serif;
+    font-size: 10pt;
+  }
+  @top-right {
+    content: "COMPLIANCE MEMO — version 1.0";
+    font-family: 'Times New Roman', serif;
+    font-size: 9pt;
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+  }
+}
+
+@page :first {
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  font-family: 'Times New Roman', 'Liberation Serif', Times, serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #000;
+  background: #fff;
+  margin: 0;
+  padding: 0;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Times New Roman', serif;
+  page-break-after: avoid;
+  break-after: avoid;
+  margin-top: 1.6em;
+  margin-bottom: 0.4em;
+  text-align: left;
+}
+
+h1 {
+  font-size: 18pt;
+  font-weight: bold;
+  font-variant: small-caps;
+  text-align: center;
+  border-bottom: 1.5px solid #000;
+  padding-bottom: 0.25em;
+  letter-spacing: 0.04em;
+  margin-top: 1.5em;
+}
+
+h2 {
+  font-size: 13.5pt;
+  font-weight: bold;
+  border-bottom: 0.5px solid #000;
+  padding-bottom: 0.1em;
+  letter-spacing: 0.02em;
+}
+
+h3 {
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: bold;
+  font-style: italic;
+}
+
+p {
+  margin: 0.5em 0;
+  text-indent: 0;
+  orphans: 3;
+  widows: 3;
+}
+
+p + p { text-indent: 1.2em; }
+
+code, pre, tt, kbd, samp {
+  font-family: 'Courier New', 'Liberation Mono', monospace;
+  font-size: 9.5pt;
+}
+
+pre {
+  background: #fff;
+  border: 1px solid #000;
+  padding: 0.7em 0.9em;
+  margin: 1em 0;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  line-height: 1.3;
+  overflow: visible;
+  font-size: 9pt;
+}
+
+code {
+  background: #f3f3f3;
+  padding: 0.05em 0.25em;
+  border: 0.5px solid #bbb;
+  font-size: 9.5pt;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 9pt;
+}
+
+table {
+  border-collapse: collapse;
+  margin: 1em auto;
+  width: 100%;
+  font-size: 10pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+th {
+  border-top: 1.5px solid #000;
+  border-bottom: 0.75px solid #000;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  font-weight: bold;
+  font-variant: small-caps;
+}
+
+td {
+  padding: 0.35em 0.6em;
+  border-bottom: 0.25px solid #aaa;
+  vertical-align: top;
+}
+
+table tr:last-child td {
+  border-bottom: 1.5px solid #000;
+}
+
+blockquote {
+  border-left: 2px solid #000;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-right: 1em;
+  font-style: italic;
+  color: #222;
+}
+
+ul, ol {
+  margin: 0.4em 0 0.4em 1.5em;
+  padding: 0;
+}
+
+li { margin: 0.18em 0; }
+
+a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 0.5px dotted #555;
+}
+
+img, svg {
+  max-width: 100%;
+  display: block;
+  margin: 1em auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure {
+  text-align: center;
+  margin: 1.4em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img, figure svg {
+  margin: 0 auto 0.4em auto;
+  max-width: 95%;
+}
+
+figcaption {
+  font-size: 9.5pt;
+  font-style: italic;
+  margin-top: 0.3em;
+  color: #222;
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+}
+
+hr {
+  border: none;
+  border-top: 0.5px solid #000;
+  margin: 1.5em 0;
+}
+
+strong, b { font-weight: bold; }
+em, i { font-style: italic; }
+
+/* Title page */
+.title-page {
+  page-break-after: always;
+  break-after: page;
+  text-align: center;
+  padding-top: 1.8in;
+}
+
+.title-page .doc-id {
+  font-family: 'Courier New', monospace;
+  font-size: 10pt;
+  letter-spacing: 0.2em;
+  margin-bottom: 1.5in;
+  color: #000;
+}
+
+.title-page h1 {
+  font-size: 32pt;
+  border: none;
+  margin: 0.2em 0;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+
+.title-page .subtitle {
+  font-size: 14pt;
+  font-style: italic;
+  margin: 0.6em 0 0 0;
+  border: none;
+}
+
+.title-page .ornament {
+  font-size: 14pt;
+  margin: 1.5em 0;
+  letter-spacing: 0.4em;
+}
+
+.title-page .meta {
+  margin-top: 2.2in;
+  font-size: 11pt;
+  line-height: 1.9;
+}
+
+.title-page .meta div { margin: 0.1em 0; }
+
+.title-page .meta .label {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  color: #444;
+}
+
+.title-page .footer-rule {
+  border-top: 1.5px solid #000;
+  width: 30%;
+  margin: 0.5in auto 0 auto;
+}
+
+/* Diagrams */
+.diagram {
+  margin: 1.6em 0;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-caption {
+  font-size: 9.5pt;
+  font-style: italic;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  margin-top: 0.4em;
+}
+
+/* Section dividers */
+.section-divider {
+  text-align: center;
+  margin: 2em 0;
+  letter-spacing: 0.5em;
+  font-size: 10pt;
+}
+
+/* Verbatim quote callouts (verified verbatim from primary sources) */
+.verbatim {
+  border: 0.5px solid #000;
+  background: #fafafa;
+  padding: 0.6em 0.9em;
+  margin: 1em 0;
+  font-family: 'Courier New', monospace;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  page-break-inside: avoid;
+}
+
+.verbatim .src {
+  display: block;
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 9pt;
+  color: #444;
+  margin-top: 0.5em;
+  text-align: right;
+}
+
+/* Verdict tags */
+.verdict-yes { font-variant: small-caps; letter-spacing: 0.05em; }
+.verdict-no  { font-variant: small-caps; letter-spacing: 0.05em; }

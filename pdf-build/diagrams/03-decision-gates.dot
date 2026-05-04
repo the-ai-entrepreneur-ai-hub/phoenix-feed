@@ -1,0 +1,32 @@
+digraph gates {
+  rankdir=TB;
+  bgcolor="white";
+  splines=true;
+  nodesep=0.4;
+  ranksep=0.55;
+
+  node [shape=box, style="solid", fontname="Times-Roman", fontsize=10];
+  edge [color=black, fontname="Times-Italic", fontsize=8];
+
+  free_ready [label="GATE F1\nFree tier — readiness", shape=box, peripheries=2];
+
+  f1 [label="Disclaimer banner live\n(‘not for emergency use’)"];
+  f2 [label="EULA: as-is, liability cap,\nbodily-harm waiver"];
+  f3 [label="Polling cadence ≥ 60s\nbackoff on 5xx"];
+  f4 [label="PII redaction layer\n(no street numbers, no names)"];
+  f5 [label="No Phoenix logos\nor seal in UI"];
+
+  free_ship [label="SHIP free version", shape=box, peripheries=2];
+
+  paid_ready [label="GATE P1\nPaid tier — readiness", shape=box, peripheries=2];
+
+  p1 [label="ARS § 39-121.03(A)\ncommercial purpose statement\nfiled with City Clerk"];
+  p2 [label="Fee schedule received\nand approved"];
+  p3 [label="Counsel reviewed:\nad-revenue = commercial?"];
+  p4 [label="ToS counsel-reviewed\n+ governing-law clause"];
+
+  paid_ship [label="SHIP paid version", shape=box, peripheries=2];
+
+  free_ready -> f1 -> f2 -> f3 -> f4 -> f5 -> free_ship;
+  paid_ready -> p1 -> p2 -> p3 -> p4 -> paid_ship;
+}

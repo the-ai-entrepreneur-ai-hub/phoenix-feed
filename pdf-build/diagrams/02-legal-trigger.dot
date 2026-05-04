@@ -1,0 +1,34 @@
+digraph legaltrigger {
+  rankdir=TB;
+  bgcolor="white";
+  splines=true;
+  nodesep=0.45;
+  ranksep=0.55;
+
+  node [shape=box, style="solid", fontname="Times-Roman", fontsize=10, color=black, fontcolor=black];
+  edge [color=black, fontname="Times-Italic", fontsize=8];
+
+  start [label="We obtain Phoenix\npublic record data\n(scrape OR open-data CSV)", shape=box, peripheries=2];
+
+  q1 [label="Used for a\n‘commercial purpose’\nunder ARS § 39-121.03(D)?", shape=diamond, fontsize=9];
+
+  noncommercial [label="Non-commercial use\n(personal viewing, journalism,\nresearch)", shape=box];
+
+  yes_filed [label="YES — and we filed a\ncommercial purpose statement\nunder § 39-121.03(A)", shape=box];
+
+  yes_unfiled [label="YES — and we did NOT file", shape=box, peripheries=2];
+
+  outcome_safe [label="Inspection/copy fees only.\nNo treble damages exposure.", shape=box];
+
+  outcome_pay [label="City sets ‘market value’ fee.\nWe pay assessed amount (1×).\nClean monetization path.", shape=box];
+
+  outcome_bad [label="ARS § 39-121.03(C):\nliable for THREE TIMES\nthe market value\n+ costs + attorney fees.", shape=box, peripheries=2];
+
+  start -> q1;
+  q1 -> noncommercial [label="no"];
+  q1 -> yes_filed    [label="yes (filed)"];
+  q1 -> yes_unfiled  [label="yes (unfiled)"];
+  noncommercial -> outcome_safe;
+  yes_filed     -> outcome_pay;
+  yes_unfiled   -> outcome_bad;
+}

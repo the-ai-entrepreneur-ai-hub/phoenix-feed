@@ -23,13 +23,13 @@
 
 ## W8. `/v1/health` upgrade
 
-- [ ] Add health DTOs.
-- [ ] Add store query for per-source last success and latest canary.
-- [ ] Write failing handler tests for `ok`, `degraded`, and stale-source `down`.
-- [ ] Replace skeleton `/v1/health`.
-- [ ] Return `503` when source freshness is older than 10 minutes.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W8): source-aware health`.
+- [x] Add health DTOs.
+- [x] Add store query for per-source last success and latest canary.
+- [x] Write failing handler tests for `ok`, `degraded`, and stale-source `down`.
+- [x] Replace skeleton `/v1/health`.
+- [x] Return `503` when source freshness is older than 10 minutes.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W8): source-aware health`.
 
 ## W6. `/v1/incidents/{source}/{incident_id}`
 

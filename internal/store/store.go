@@ -5,6 +5,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -67,6 +68,20 @@ type ActiveIncident struct {
 type ActiveIncidentsResult struct {
 	Meta      StalenessMeta    `json:"meta"`
 	Incidents []ActiveIncident `json:"incidents"`
+}
+
+type CanaryHealth struct {
+	CheckedAt     *time.Time
+	Passed        *bool
+	Drift         json.RawMessage
+	ParserVersion string
+}
+
+type SourceHealth struct {
+	Source        string
+	LastSuccessAt *time.Time
+	ParserVersion string
+	Canary        *CanaryHealth
 }
 
 func New(ctx context.Context, dsn string) (*Store, error) {
@@ -274,6 +289,67 @@ func (s *Store) LatestSuccessAt(ctx context.Context, source string) (time.Time, 
 		return time.Time{}, nil
 	}
 	return t, err
+}
+
+// SourceHealth returns freshness and latest canary status for configured sources.
+func (s *Store) SourceHealth(ctx context.Context, sources []string) ([]SourceHealth, error) {
+	out := make([]SourceHealth, 0, len(sources))
+	for _, source := range sources {
+		row := SourceHealth{Source: source}
+
+		var lastSuccess sql.NullTime
+		var parserVersion sql.NullString
+		err := s.pool.QueryRow(ctx, `
+			SELECT started_at, parser_version
+			FROM source_polls
+			WHERE source = $1 AND success = TRUE
+			ORDER BY started_at DESC
+			LIMIT 1`, source,
+		).Scan(&lastSuccess, &parserVersion)
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("latest source success %s: %w", source, err)
+		}
+		if lastSuccess.Valid {
+			row.LastSuccessAt = &lastSuccess.Time
+		}
+		if parserVersion.Valid {
+			row.ParserVersion = parserVersion.String
+		}
+
+		var checkedAt sql.NullTime
+		var passed sql.NullBool
+		var drift []byte
+		var canaryParser sql.NullString
+		err = s.pool.QueryRow(ctx, `
+			SELECT checked_at, passed, drift, parser_version
+			FROM contract_canary
+			WHERE source = $1
+			ORDER BY checked_at DESC
+			LIMIT 1`, source,
+		).Scan(&checkedAt, &passed, &drift, &canaryParser)
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("latest canary %s: %w", source, err)
+		}
+		if err != pgx.ErrNoRows {
+			canary := &CanaryHealth{}
+			if checkedAt.Valid {
+				canary.CheckedAt = &checkedAt.Time
+			}
+			if passed.Valid {
+				canary.Passed = &passed.Bool
+			}
+			if len(drift) > 0 {
+				canary.Drift = json.RawMessage(drift)
+			}
+			if canaryParser.Valid {
+				canary.ParserVersion = canaryParser.String
+			}
+			row.Canary = canary
+		}
+
+		out = append(out, row)
+	}
+	return out, nil
 }
 
 // Ping is a thin wrapper for the API health endpoint.

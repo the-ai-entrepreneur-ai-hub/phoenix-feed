@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -14,11 +15,16 @@ import (
 // Store is the database surface needed by the API handlers.
 type Store interface {
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
+	Ping(context.Context) error
+	SourceHealth(context.Context, []string) ([]store.SourceHealth, error)
 }
 
 // Config carries API-specific runtime behavior.
 type Config struct {
 	DefaultParserVersion string
+	Sources              []string
+	StaleAfter           time.Duration
+	Now                  func() time.Time
 }
 
 // Router returns a standalone v1 API router. cmd/api wraps this with process
@@ -32,4 +38,5 @@ func Router(st Store, cfg Config, log *slog.Logger) http.Handler {
 // RegisterRoutes adds API routes to an existing chi router.
 func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	r.Get("/v1/health", healthHandler(st, cfg, log))
 }

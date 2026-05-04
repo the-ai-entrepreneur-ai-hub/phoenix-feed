@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -16,11 +17,23 @@ type fakeStore struct {
 	activeFilter store.ActiveIncidentFilter
 	activeResult store.ActiveIncidentsResult
 	activeErr    error
+
+	pingErr      error
+	sourceHealth []store.SourceHealth
+	healthErr    error
 }
 
 func (f *fakeStore) ListActiveIncidents(_ context.Context, filter store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error) {
 	f.activeFilter = filter
 	return f.activeResult, f.activeErr
+}
+
+func (f *fakeStore) Ping(_ context.Context) error {
+	return f.pingErr
+}
+
+func (f *fakeStore) SourceHealth(_ context.Context, _ []string) ([]store.SourceHealth, error) {
+	return f.sourceHealth, f.healthErr
 }
 
 func TestActiveIncidentsEmptyResponseIncludesMeta(t *testing.T) {
@@ -124,3 +137,9 @@ func TestActiveIncidentsRejectsMixedSpatialFilters(t *testing.T) {
 func ptrInt(v int) *int {
 	return &v
 }
+
+func ptrBool(v bool) *bool {
+	return &v
+}
+
+var errTestPing = errors.New("db unavailable")

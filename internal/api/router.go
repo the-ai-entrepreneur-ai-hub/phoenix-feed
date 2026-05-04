@@ -23,6 +23,7 @@ type Store interface {
 // Config carries API-specific runtime behavior.
 type Config struct {
 	DefaultParserVersion string
+	PaidTierEnabled      bool
 	Sources              []string
 	StaleAfter           time.Duration
 	Now                  func() time.Time
@@ -43,6 +44,7 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	r.Get("/v1/incidents/history", historyPlaceholderHandler(cfg))
 	r.Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
 	r.Get("/v1/health", healthHandler(st, cfg, log))
 }

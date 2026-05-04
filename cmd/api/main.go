@@ -43,6 +43,7 @@ func main() {
 
 	api.RegisterRoutes(r, st, api.Config{
 		DefaultParserVersion: phxfire.ParserVersion,
+		PaidTierEnabled:      cfg.PaidTierEnabled,
 		Sources:              []string{phxfire.SourceName},
 		StaleAfter:           10 * time.Minute,
 	}, log)

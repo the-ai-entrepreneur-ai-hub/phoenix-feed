@@ -10,13 +10,14 @@ import (
 )
 
 type Config struct {
-	DatabaseURL     string        // postgres://...
-	PollInterval    time.Duration // ingester base cadence
-	PollJitter      time.Duration // ± jitter applied each cycle
-	HTTPAddr        string        // api bind address
-	ClearAfterMisses int          // consecutive successful polls absent before clearing
-	RawRetention    time.Duration // janitor: drop raw JSONB after this age
-	LogLevel        string        // "debug" | "info" | "warn" | "error"
+	DatabaseURL      string        // postgres://...
+	PollInterval     time.Duration // ingester base cadence
+	PollJitter       time.Duration // ± jitter applied each cycle
+	HTTPAddr         string        // api bind address
+	ClearAfterMisses int           // consecutive successful polls absent before clearing
+	RawRetention     time.Duration // janitor: drop raw JSONB after this age
+	LogLevel         string        // "debug" | "info" | "warn" | "error"
+	PaidTierEnabled  bool          // gates paid placeholders; default false
 }
 
 func Load() (Config, error) {
@@ -28,6 +29,7 @@ func Load() (Config, error) {
 		PollInterval:     envDuration("POLL_INTERVAL", 60*time.Second),
 		PollJitter:       envDuration("POLL_JITTER", 10*time.Second),
 		RawRetention:     envDuration("RAW_RETENTION", 30*24*time.Hour),
+		PaidTierEnabled:  envBool("PAID_TIER_ENABLED", false),
 	}
 
 	if c.PollJitter >= c.PollInterval {
@@ -59,6 +61,18 @@ func envDuration(key string, fallback time.Duration) time.Duration {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
+		}
+	}
+	return fallback
+}
+
+func envBool(key string, fallback bool) bool {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		switch v {
+		case "1", "true", "TRUE", "True", "yes", "YES", "Yes", "on", "ON", "On":
+			return true
+		case "0", "false", "FALSE", "False", "no", "NO", "No", "off", "OFF", "Off":
+			return false
 		}
 	}
 	return fallback

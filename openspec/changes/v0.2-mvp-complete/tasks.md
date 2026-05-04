@@ -71,12 +71,12 @@
 
 ## W7. Paid history placeholder
 
-- [ ] Add `PAID_TIER_ENABLED` config field defaulting false.
-- [ ] Write failing config and handler tests.
-- [ ] Wire `GET /v1/incidents/history`.
-- [ ] Return `402` JSON explanation while paid tier is disabled.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W7): paid history placeholder`.
+- [x] Add `PAID_TIER_ENABLED` config field defaulting false.
+- [x] Write failing config and handler tests.
+- [x] Wire `GET /v1/incidents/history`.
+- [x] Return `402` JSON explanation while paid tier is disabled.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W7): paid history placeholder`.
 
 ## Closeout
 

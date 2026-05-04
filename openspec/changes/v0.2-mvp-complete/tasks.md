@@ -61,13 +61,13 @@
 
 ## W4. Static web client
 
-- [ ] Add local CORS support to API.
-- [ ] Create `web/index.html` with Leaflet map/list shell.
-- [ ] Create `web/styles.css` with mobile-friendly layout.
-- [ ] Create `web/app.js` fetching `http://localhost:8080/v1/incidents/active`.
+- [x] Add local CORS support to API.
+- [x] Create `web/index.html` with Leaflet map/list shell.
+- [x] Create `web/styles.css` with mobile-friendly layout.
+- [x] Create `web/app.js` fetching `http://localhost:8080/v1/incidents/active`.
 - [ ] Smoke-check direct file opening against local API.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W4): static incident map client`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W4): static incident map client`.
 
 ## W7. Paid history placeholder
 

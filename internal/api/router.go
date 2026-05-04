@@ -38,6 +38,10 @@ func Router(st Store, cfg Config, log *slog.Logger) http.Handler {
 
 // RegisterRoutes adds API routes to an existing chi router.
 func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
+	r.Use(corsMiddleware)
+	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
 	r.Get("/v1/health", healthHandler(st, cfg, log))

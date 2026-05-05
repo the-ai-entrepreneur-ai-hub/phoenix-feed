@@ -43,14 +43,14 @@
 
 ## W6. Smoke test scripts
 
-- [ ] Rename `docker-compose.yml` to `docker-compose.dev.yml`.
-- [ ] Update Makefile references.
-- [ ] Add migration application command path.
-- [ ] Add `scripts/smoke.sh`.
-- [ ] Add `scripts/smoke.ps1`.
-- [ ] Run available script syntax checks.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W6): smoke test scripts`.
+- [x] Rename `docker-compose.yml` to `docker-compose.dev.yml`.
+- [x] Update Makefile references.
+- [x] Add migration application command path.
+- [x] Add `scripts/smoke.sh`.
+- [x] Add `scripts/smoke.ps1`.
+- [x] Run available script syntax checks.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W6): smoke test scripts`.
 
 ## W4. Dockerfiles + production Compose
 

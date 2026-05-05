@@ -3,7 +3,7 @@
 
 GO          := go
 DOCKER      := docker
-COMPOSE     := docker compose
+COMPOSE     := docker compose -f docker-compose.dev.yml
 
 CMDS        := ingester api canary janitor
 BIN_DIR     := bin
@@ -21,6 +21,7 @@ help:
 	@echo "  make ingester    - run cmd/ingester against local DB"
 	@echo "  make api         - run cmd/api against local DB"
 	@echo "  make pdf         - rebuild all design PDFs"
+	@echo "  make smoke       - run local end-to-end smoke test"
 
 .PHONY: tidy
 tidy:
@@ -68,3 +69,7 @@ api:
 pdf:
 	python pdf-build/build.py
 	python pdf-build/build_template.py
+
+.PHONY: smoke
+smoke:
+	bash scripts/smoke.sh

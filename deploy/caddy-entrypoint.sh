@@ -38,7 +38,8 @@ write_security_headers() {
 		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
 		Cross-Origin-Resource-Policy "same-site"
 		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
-		Server "cactus-watch"
+		>Server "cactus-watch"
+		-Via
 EOF
 	if [ "$SITE_ADDRESS" = "${SITE_ADDRESS#:}" ]; then
 		printf '\t\tStrict-Transport-Security "max-age=31536000; includeSubDomains; preload"\n'

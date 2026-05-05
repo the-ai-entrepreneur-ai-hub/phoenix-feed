@@ -25,6 +25,7 @@ type Store interface {
 // Config carries API-specific runtime behavior.
 type Config struct {
 	DefaultParserVersion string
+	AllowedOrigins       []string
 	PaidTierEnabled      bool
 	Sources              []string
 	StaleAfter           time.Duration
@@ -42,7 +43,7 @@ func Router(st Store, cfg Config, log *slog.Logger) http.Handler {
 
 // RegisterRoutes adds API routes to an existing chi router.
 func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
-	r.Use(corsMiddleware)
+	r.Use(corsMiddleware(cfg.AllowedOrigins))
 	r.Use(authMiddleware(st, log))
 	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

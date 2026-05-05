@@ -13,14 +13,14 @@
 
 - [x] Add Caddy response headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Resource-Policy`, `Content-Security-Policy`, and `Server`.
 - [x] Apply the headers to upstream responses and Caddy-generated error responses.
-- [ ] Deploy Caddy and verify `curl -I` shows the headers.
-- [ ] Commit `feat(W2): harden API response headers`.
+- [x] Deploy Caddy and verify `curl -I` shows the headers.
+- [x] Commit `feat(W2): harden API response headers`.
 
 ## W3. CORS lockdown
 
-- [ ] Add `ALLOWED_ORIGINS` config parsing with empty default.
-- [ ] Change CORS middleware to allow no-Origin native requests, echo only configured origins, and reject disallowed preflights.
-- [ ] Add tests for no Origin, allowed Origin, denied Origin, and denied preflight.
+- [x] Add `ALLOWED_ORIGINS` config parsing with empty default.
+- [x] Change CORS middleware to allow no-Origin native requests, echo only configured origins, and reject disallowed preflights.
+- [x] Add tests for no Origin, allowed Origin, denied Origin, and denied preflight.
 - [ ] Deploy the API and verify `/v1/health` returns 200.
 - [ ] Commit `feat(W3): lock down CORS origins`.
 

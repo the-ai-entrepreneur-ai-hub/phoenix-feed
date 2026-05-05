@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type Config struct {
 	RawRetention     time.Duration // janitor: drop raw JSONB after this age
 	LogLevel         string        // "debug" | "info" | "warn" | "error"
 	PaidTierEnabled  bool          // gates paid placeholders; default false
+	AllowedOrigins   []string      // exact browser origins allowed for CORS
 }
 
 func Load() (Config, error) {
@@ -30,6 +32,7 @@ func Load() (Config, error) {
 		PollJitter:       envDuration("POLL_JITTER", 10*time.Second),
 		RawRetention:     envDuration("RAW_RETENTION", 30*24*time.Hour),
 		PaidTierEnabled:  envBool("PAID_TIER_ENABLED", false),
+		AllowedOrigins:   envList("ALLOWED_ORIGINS"),
 	}
 
 	if c.PollJitter >= c.PollInterval {
@@ -39,6 +42,22 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("CLEAR_AFTER_MISSES must be >= 1")
 	}
 	return c, nil
+}
+
+func envList(key string) []string {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			values = append(values, part)
+		}
+	}
+	return values
 }
 
 func env(key, fallback string) string {

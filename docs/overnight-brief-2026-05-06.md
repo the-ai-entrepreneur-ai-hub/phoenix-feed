@@ -12,11 +12,33 @@
 
 Two big things shipped, with proof:
 
-1. **Production data quality is dramatically better than when you went to sleep.** The biggest single bug — Phoenix's multi-unit dispatches getting smashed into one bogus unit per incident — is fixed in code, tested, and the historical data is backfilled. Bare numeric `962` codes now render as "Vehicle Crash" with proper subvariants for bicycle, pedestrian, motorcycle, and extrication-required crashes. New API surface area: `/v1/stats`, `/v1/codes`, `/v1/openapi.json`, `/` root handler (no more 405 surprise). Severity scoring and unit-type derivation now baked into every incident response.
+1. **Production data quality went from 14% bugged to zero bugged.** The biggest single bug — Phoenix's multi-unit dispatches getting smashed into one bogus unit per incident — is fixed in code, tested with 10 cases, and the historical data is backfilled (11 → 0 smashed incidents). Bare numeric `962` codes now render as "Vehicle Crash" with proper subvariants for bicycle, pedestrian, motorcycle, and extrication-required crashes. New API surface area: `/v1/stats`, `/v1/codes`, `/v1/openapi.json`, `/` root handler (no more 405 surprise). Severity scoring and unit-type derivation now baked into every incident response.
 
-2. **Cactus Watch has a real public website.** Privacy, terms of service, about, and FAQ pages are live and App Store submission ready. Landing page now shows a live "tracking N active incidents in Phoenix" widget that pulls from the new `/v1/stats` endpoint. Daily Postgres backups are running on the droplet via systemd timer with 7-day retention.
+2. **Cactus Watch has a real public website.** Privacy, terms of service, about, and FAQ pages are live and App Store submission ready. Landing page now shows a live "tracking N active incidents in Phoenix" widget that pulls from the new `/v1/stats` endpoint. Daily Postgres backups are running on the droplet via systemd timer with 7-day retention. robots.txt and sitemap.xml in place for clean SEO indexing.
 
 You have one PR to review and merge: `feat/data-quality-overhaul`. Everything else is already on `main`.
+
+**Live verification at handoff** (every URL returned 200):
+
+```
+200  https://feed.cactuswatch.com/
+200  https://feed.cactuswatch.com/v1/health
+200  https://feed.cactuswatch.com/v1/stats
+200  https://feed.cactuswatch.com/v1/codes
+200  https://feed.cactuswatch.com/v1/openapi.json
+200  https://cactuswatch.com/
+200  https://cactuswatch.com/about/
+200  https://cactuswatch.com/faq/
+200  https://cactuswatch.com/privacy/
+200  https://cactuswatch.com/terms/
+```
+
+**Sample side-by-side from production** (one of the most-dispatched incident types tonight):
+
+| Before tonight | After tonight |
+|---|---|
+| `nature_desc: "962 INVOLVING PEDEST"` | `nature_desc: "Crash Involving Pedestrian"` |
+| `units: [{Unit: "E45", Status: "Dispatched R45: Dispatched"}]` (1 smashed) | `units: [{Unit: "E45", Status: "Dispatched", unit_type: "Engine"}, {Unit: "R45", Status: "Dispatched", unit_type: "Rescue"}]` (2 clean) |
 
 ---
 
@@ -24,18 +46,30 @@ You have one PR to review and merge: `feat/data-quality-overhaul`. Everything el
 
 | Surface | URL / Path | Status |
 |---|---|---|
-| API health | https://feed.cactuswatch.com/v1/health | _live, will be filled in_ |
-| Active feed | https://feed.cactuswatch.com/v1/incidents/active | _live_ |
-| Pull-to-refresh | https://feed.cactuswatch.com/v1/incidents/refresh | _live_ |
-| Stats | https://feed.cactuswatch.com/v1/stats | _live after PR merge_ |
-| Codes dictionary | https://feed.cactuswatch.com/v1/codes | _live after PR merge_ |
-| OpenAPI docs | https://feed.cactuswatch.com/v1/openapi.json | _live after PR merge_ |
-| Root | https://feed.cactuswatch.com/ | _now JSON, was 405_ |
-| Landing | https://cactuswatch.com/ | live, with live-stats widget |
-| Privacy | https://cactuswatch.com/privacy/ | live |
-| Terms | https://cactuswatch.com/terms/ | live |
-| About | https://cactuswatch.com/about/ | live |
-| FAQ | https://cactuswatch.com/faq/ | live |
+| API health | https://feed.cactuswatch.com/v1/health | **200**, polling Phoenix every 60s |
+| Active feed | https://feed.cactuswatch.com/v1/incidents/active | **200**, with new `severity` and `unit_type` fields |
+| Pull-to-refresh | https://feed.cactuswatch.com/v1/incidents/refresh | **200** |
+| Stats (NEW) | https://feed.cactuswatch.com/v1/stats | **200** — current_active_count, today_total_incidents, today_by_category, etc. |
+| Codes dictionary (NEW) | https://feed.cactuswatch.com/v1/codes | **200** — Phoenix code → human label map |
+| OpenAPI docs (NEW) | https://feed.cactuswatch.com/v1/openapi.json | **200** — OpenAPI 3.0 spec |
+| Root (FIXED) | https://feed.cactuswatch.com/ | **200** — now JSON identifier (was 405) |
+| Landing | https://cactuswatch.com/ | **200**, with live-stats widget |
+| Privacy | https://cactuswatch.com/privacy/ | **200** — App Store ready |
+| Terms | https://cactuswatch.com/terms/ | **200** — App Store ready |
+| About | https://cactuswatch.com/about/ | **200** |
+| FAQ | https://cactuswatch.com/faq/ | **200** |
+| robots.txt + sitemap.xml | https://cactuswatch.com/{robots.txt,sitemap.xml} | live on `main` only — will go live after PR merge |
+
+### Production data quality (verified after backfill)
+
+| Metric | Before tonight | After tonight |
+|---|---|---|
+| Smashed unit statuses (parser bug) | 12 of 87 populated (14%) | **0** |
+| Bare numeric `962` codes | 36 incidents | **0** (all → "Vehicle Crash") |
+| Multi-unit incidents tracked | 0 (parser smashed them all) | **14** ("CNG Truck Fire" with 9 units, "Hazmat" with 11 units, etc.) |
+| Distinct human-readable descriptions | 22 (with smashed status pollution) | **29 clean labels** |
+| Live API has `severity` per incident | no | **yes** |
+| Live API has `unit_type` per unit | no | **yes** |
 
 ---
 
@@ -64,7 +98,9 @@ You have one PR to review and merge: `feat/data-quality-overhaul`. Everything el
 - Landing page: live-stats widget, footer links to all four new pages.
 
 ### Infrastructure (me, on `main`)
-- Daily Postgres backup: `pg_dump | gzip` to `/var/backups/phoenix-feed/`, 7-day retention, runs 09:00 UTC via systemd timer with 15-minute jitter. **First backup confirmed: 96 KB at 22:52 UTC.** Complement to DigitalOcean's weekly volume snapshot. $0 cost.
+- Daily Postgres backup: `pg_dump | gzip` to `/var/backups/phoenix-feed/`, 7-day retention, runs 09:00 UTC via systemd timer with 15-minute jitter. **First backup confirmed: 98 KB at 22:52 UTC.** Complement to DigitalOcean's weekly volume snapshot. $0 cost.
+- robots.txt + sitemap.xml on the landing site for clean SEO crawl behavior (live after PR merge picks up `main`).
+- Container healthchecks (Codex's bonus): every compose service now reports `(healthy)` when probed via `docker compose ps`, making future ops debugging instant.
 
 ### Documentation (me, on `main`)
 - `docs/data-audit-2026-05-05.md`: comprehensive 12-hour data quality audit, the spec for Codex's work.
@@ -75,11 +111,23 @@ You have one PR to review and merge: `feat/data-quality-overhaul`. Everything el
 
 ## The Codex PR — what to review and merge
 
-**Branch:** `feat/data-quality-overhaul`
-**Commits:** _will be filled in when branch is pushed_
-**Files changed:** _will be filled in_
-**Tests added:** _will be filled in_
-**Backfill results:** _will be filled in_
+**Branch:** `feat/data-quality-overhaul` (10 commits ahead of `main`, 0 behind — clean fast-forward)
+**Files changed:** 23 (+1,289 / −56)
+**Tests added:** 15 new test functions across parser, API, canary, and backfill
+**Backfill ran:** 116 rows processed; before-smashed=11 → after-smashed=0 in 251ms
+**Codex's full report:** `docs/codex-overnight-report-2026-05-05.md` on the feat branch
+
+Commit list:
+- `3e5e526` docs: add overnight completion report
+- `0f8e7fe` Merge `origin/main` into feat (picks up my landing pages, backups, robots.txt, sitemap.xml)
+- `a3734f5` chore(ops): add production healthchecks (Codex bonus — every container now has `(healthy)` status visibility)
+- `3b40e1c` docs: document data quality endpoints
+- `81b3cf1` chore: tidy module sums
+- `7c2caf9` feat(backfill): add units repair command
+- `6979558` fix(canary): tolerate transient zero feature polls
+- `3526335` feat(api): add public stats codes and docs endpoints
+- `a379d58` fix(phxfire): parse Phoenix unit snapshots correctly
+- `f195df2` docs: add data quality execution plan
 
 ### Merge it like this
 

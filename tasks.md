@@ -10,9 +10,9 @@ Ship the Phoenix Fire data quality fixes and public API polish on `feat/data-qua
 - Use existing droplet resources and current Go dependencies.
 
 ## Execution Plan
-- [ ] A1: Add failing parser tests for Phoenix space-delimited unit/status pairs, empty units, weird spacing, NB hyphen unit names, and production smashed samples.
-- [ ] A1: Replace comma-split `parseUnits` with whitespace token state machine and keep legacy comma sample working.
-- [ ] A3/A4/B4: Add nature description overrides, non-nil empty units, and `unit_type` derivation in parser/model with tests.
+- [x] A1: Add failing parser tests for Phoenix space-delimited unit/status pairs, empty units, weird spacing, NB hyphen unit names, and production smashed samples.
+- [x] A1: Replace comma-split `parseUnits` with whitespace token state machine and keep legacy comma sample working.
+- [x] A3/A4/B4: Add nature description overrides, non-nil empty units, and `unit_type` derivation in parser/model with tests.
 - [ ] B3: Add severity derivation to active/detail incident response structs with API tests.
 - [ ] B1: Add `Store.Stats` SQL query and `GET /v1/stats` handler with tests.
 - [ ] B2: Add code dictionary helpers and `GET /v1/codes` handler with tests.

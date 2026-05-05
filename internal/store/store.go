@@ -56,7 +56,7 @@ type ActiveIncident struct {
 	IncidentID           string       `json:"incident_id"`
 	NatureCode           string       `json:"nature_code,omitempty"`
 	NatureDesc           string       `json:"nature_desc,omitempty"`
-	Units                []model.Unit `json:"units,omitempty"`
+	Units                []model.Unit `json:"units"`
 	Channel              string       `json:"channel,omitempty"`
 	SymbolCode           string       `json:"symbol_code,omitempty"`
 	LocationText         string       `json:"location_text,omitempty"`
@@ -79,7 +79,7 @@ type IncidentDetail struct {
 	IncidentID   string       `json:"incident_id"`
 	NatureCode   string       `json:"nature_code,omitempty"`
 	NatureDesc   string       `json:"nature_desc,omitempty"`
-	Units        []model.Unit `json:"units,omitempty"`
+	Units        []model.Unit `json:"units"`
 	Channel      string       `json:"channel,omitempty"`
 	SymbolCode   string       `json:"symbol_code,omitempty"`
 	LocationText string       `json:"location_text,omitempty"`
@@ -231,7 +231,7 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 
 	incidents := []ActiveIncident{}
 	for rows.Next() {
-		var inc ActiveIncident
+		inc := ActiveIncident{Units: []model.Unit{}}
 		var unitsBytes []byte
 		if err := rows.Scan(
 			&inc.Source, &inc.IncidentID, &inc.NatureCode, &inc.NatureDesc, &unitsBytes, &inc.Channel,
@@ -243,6 +243,9 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 		if len(unitsBytes) > 0 {
 			if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
 				return ActiveIncidentsResult{}, fmt.Errorf("decode units for %s/%s: %w", inc.Source, inc.IncidentID, err)
+			}
+			if inc.Units == nil {
+				inc.Units = []model.Unit{}
 			}
 		}
 		incidents = append(incidents, inc)
@@ -316,7 +319,7 @@ func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*In
 		FROM incidents
 		WHERE source = $1 AND incident_id = $2`
 
-	var inc IncidentDetail
+	inc := IncidentDetail{Units: []model.Unit{}}
 	var natureCode, natureDesc, channel, symbolCode, locationText sql.NullString
 	var lon, lat sql.NullFloat64
 	var clearedAt sql.NullTime
@@ -346,6 +349,9 @@ func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*In
 	if len(unitsBytes) > 0 {
 		if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
 			return nil, fmt.Errorf("decode incident units %s/%s: %w", source, incidentID, err)
+		}
+		if inc.Units == nil {
+			inc.Units = []model.Unit{}
 		}
 	}
 	return &inc, nil

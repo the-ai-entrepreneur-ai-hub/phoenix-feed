@@ -54,6 +54,38 @@ var expectedFields = []string{
 	"GenLocInfo",
 }
 
+var natureDescOverrides = map[string]string{
+	"962":   "Vehicle Crash",
+	"962A":  "Vehicle Crash",
+	"962BC": "Crash Involving Bicycle",
+	"962P":  "Crash Involving Pedestrian",
+	"962X":  "Crash Requiring Extrication",
+	"962MC": "Crash Involving Motorcycle",
+}
+
+var unitTypePrefixes = []struct {
+	prefix   string
+	unitType string
+}{
+	{prefix: "NEDC", unitType: "Division Chief"},
+	{prefix: "NDC", unitType: "Division Chief"},
+	{prefix: "SDC", unitType: "Division Chief"},
+	{prefix: "WDC", unitType: "Division Chief"},
+	{prefix: "EDC", unitType: "Division Chief"},
+	{prefix: "BC", unitType: "Battalion Chief"},
+	{prefix: "BR", unitType: "Brush truck"},
+	{prefix: "HM", unitType: "Hazmat unit"},
+	{prefix: "HR", unitType: "Heavy Rescue"},
+	{prefix: "DR", unitType: "Drone"},
+	{prefix: "PI", unitType: "Public Information"},
+	{prefix: "LT", unitType: "Light truck"},
+	{prefix: "E", unitType: "Engine"},
+	{prefix: "L", unitType: "Ladder / Truck"},
+	{prefix: "M", unitType: "Medic / Ambulance"},
+	{prefix: "S", unitType: "Squad / Paramedic"},
+	{prefix: "R", unitType: "Rescue"},
+}
+
 // Client is the Source.
 type Client struct {
 	queryURL   string
@@ -194,11 +226,14 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 
 		featureBytes, _ := json.Marshal(f) // best effort; safe to ignore err
 
+		natureCode := strings.TrimSpace(f.Attributes.Nature)
+		natureDesc := cleanNatureDesc(natureCode, f.Attributes.NatureDesc)
+
 		out = append(out, model.Incident{
 			Source:       SourceName,
 			IncidentID:   strings.TrimSpace(f.Attributes.Incident),
-			NatureCode:   strings.TrimSpace(f.Attributes.Nature),
-			NatureDesc:   strings.TrimSpace(f.Attributes.NatureDesc),
+			NatureCode:   natureCode,
+			NatureDesc:   natureDesc,
 			Units:        parseUnits(f.Attributes.Units),
 			Channel:      strings.TrimSpace(f.Attributes.Channel),
 			SymbolCode:   strings.TrimSpace(f.Attributes.SymbolCode),
@@ -212,37 +247,88 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 	return out, nil
 }
 
-// parseUnits decodes the HTML-entity-encoded comma-separated Units string.
-//
-// Sample input:  "E2203:&#160;On&#160;Scene, L24:&#160;Dispatched"
-// After decode:  "E2203: On Scene, L24: Dispatched"
-//
-// Format is best-effort: dispatcher entries are not always uniform. We split
-// on commas, then split each entry on the first colon. Whitespace is collapsed.
+// ParseUnits decodes Phoenix's HTML-entity-encoded Units string.
+func ParseUnits(raw string) []model.Unit {
+	return parseUnits(raw)
+}
+
+// parseUnits decodes the HTML-entity-encoded space-delimited Units string.
+// Phoenix emits "<unit>: <status>" pairs separated by regular spaces after
+// HTML entity decoding. Status values can contain spaces, so token boundaries
+// are detected by the next token ending in ":".
 func parseUnits(raw string) []model.Unit {
-	if raw == "" {
-		return nil
-	}
 	decoded := html.UnescapeString(raw)
+	decoded = strings.ReplaceAll(decoded, ",", " ")
+	tokens := strings.Fields(decoded)
+	if len(tokens) == 0 {
+		return []model.Unit{}
+	}
+
 	out := []model.Unit{}
-	for _, chunk := range strings.Split(decoded, ",") {
-		chunk = collapseWhitespace(strings.TrimSpace(chunk))
-		if chunk == "" {
+	var unit string
+	var statusParts []string
+	flush := func() {
+		unit = strings.TrimSpace(unit)
+		if unit == "" {
+			return
+		}
+		status := collapseWhitespace(strings.Join(statusParts, " "))
+		out = append(out, model.Unit{Unit: unit, Status: status, UnitType: UnitTypeForName(unit)})
+	}
+
+	for _, token := range tokens {
+		token = strings.TrimSpace(token)
+		if token == "" {
 			continue
 		}
-		var unit, status string
-		if idx := strings.Index(chunk, ":"); idx >= 0 {
-			unit = strings.TrimSpace(chunk[:idx])
-			status = strings.TrimSpace(chunk[idx+1:])
-		} else {
-			unit = chunk
+		if strings.HasSuffix(token, ":") {
+			flush()
+			unit = strings.TrimSuffix(token, ":")
+			statusParts = statusParts[:0]
+			continue
 		}
 		if unit == "" {
+			unit = token
 			continue
 		}
-		out = append(out, model.Unit{Unit: unit, Status: status})
+		statusParts = append(statusParts, token)
 	}
+	flush()
 	return out
+}
+
+func cleanNatureDesc(code, desc string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	desc = strings.TrimSpace(desc)
+	override, ok := natureDescOverrides[code]
+	if !ok {
+		return desc
+	}
+	upperDesc := strings.ToUpper(desc)
+	family := numericPrefix(code)
+	if desc == "" || upperDesc == code || strings.HasPrefix(upperDesc, code) || (family != "" && strings.HasPrefix(upperDesc, family+" ")) {
+		return override
+	}
+	return desc
+}
+
+func numericPrefix(s string) string {
+	for i, r := range s {
+		if r < '0' || r > '9' {
+			return s[:i]
+		}
+	}
+	return s
+}
+
+func UnitTypeForName(unit string) string {
+	unit = strings.ToUpper(strings.TrimSpace(unit))
+	for _, item := range unitTypePrefixes {
+		if strings.HasPrefix(unit, item.prefix) {
+			return item.unitType
+		}
+	}
+	return "other"
 }
 
 func collapseWhitespace(s string) string {

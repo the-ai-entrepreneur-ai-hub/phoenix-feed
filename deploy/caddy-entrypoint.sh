@@ -72,6 +72,16 @@ EOF
 	fi
 	write_security_headers
 	write_rate_limit
+	cat <<'EOF'
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 7
+			roll_keep_for 168h
+		}
+		format json
+	}
+EOF
 	printf '\treverse_proxy api:8080\n'
 	printf '\thandle_errors {\n'
 	write_security_headers

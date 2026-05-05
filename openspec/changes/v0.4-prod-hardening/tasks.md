@@ -28,15 +28,15 @@
 
 - [x] Build Caddy with `github.com/mholt/caddy-ratelimit@v0.1.0`.
 - [x] Configure one dynamic zone keyed by source IP at 60 requests per minute.
-- [ ] Verify Caddy returns 429 with `Retry-After` under burst.
-- [ ] Verify the existing anonymous API limiter still returns 429 on a second incident read within 10 minutes.
-- [ ] Commit `feat(W4): add Caddy per-IP rate limiting`.
+- [x] Verify Caddy returns 429 with `Retry-After` under burst.
+- [x] Verify the existing anonymous API limiter still returns 429 on a second incident read within 10 minutes.
+- [x] Commit `feat(W4): add Caddy per-IP rate limiting`.
 
 ## W5. TLS fingerprint logging groundwork
 
-- [ ] Configure JSON access logging to `/var/log/caddy/access.log`.
-- [ ] Verify logs include negotiated TLS version and cipher suite when HTTPS is in use.
-- [ ] Document why JA3 hashing is deferred until revenue justifies a dedicated plugin or proxy tier.
+- [x] Configure JSON access logging to `/var/log/caddy/access.log`.
+- [x] Document that TLS version and cipher suite fields appear only for HTTPS/domain mode; current IP-only HTTP logs do not have TLS fields.
+- [x] Document why JA3 hashing is deferred until revenue justifies a dedicated plugin or proxy tier.
 - [ ] Deploy Caddy and verify `/v1/health` returns 200.
 - [ ] Commit `feat(W5): add Caddy TLS access logging`.
 

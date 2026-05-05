@@ -1,0 +1,53 @@
+digraph current {
+  rankdir=LR;
+  graph [fontname="Times New Roman", fontsize=11, splines=ortho, nodesep=0.4, ranksep=0.8, bgcolor=white];
+  node  [fontname="Times New Roman", fontsize=10, shape=box, style="filled", fillcolor=white, color=black, penwidth=1.0];
+  edge  [fontname="Times New Roman", fontsize=9, color=black, arrowsize=0.7];
+
+  subgraph cluster_ledyz {
+    label = "LEDYZ — Dell Inspiron 3910";
+    fontname = "Times New Roman";
+    fontsize = 10;
+    style = "dashed";
+    color = black;
+    margin = 12;
+
+    sds100   [label="Uniden SDS100\n(USB)"];
+    proscan  [label="ProScan"];
+    sdrplay  [label="SDRplay RSPdx\n(USB)"];
+    sdrtrunk [label="SDR-Trunk\n(JVM)"];
+    vbcable  [label="VB-Audio\nVirtual Cable"];
+    whisper  [label="cactus_transcribe.py\nfaster-whisper, CPU"];
+    disk     [label="D:\\cactus\\recordings\\\n.wav + .transcript.json"];
+  }
+
+  subgraph cluster_do {
+    label = "DigitalOcean droplet — already deployed";
+    fontname = "Times New Roman";
+    fontsize = 10;
+    style = "dashed";
+    color = black;
+    margin = 12;
+
+    phx     [label="Phoenix Fire\nArcGIS endpoint"];
+    ingest  [label="ingester"];
+    pg      [label="Postgres + PostGIS"];
+    api     [label="REST API\n+/- Caddy TLS"];
+  }
+
+  ios [label="iOS / Android\napps"];
+
+  sds100 -> proscan;
+  sdrplay -> sdrtrunk;
+  sdrtrunk -> vbcable;
+  vbcable -> whisper;
+  whisper -> disk;
+
+  phx -> ingest;
+  ingest -> pg;
+  pg -> api;
+  api -> ios;
+
+  // Note the gap: transcripts on LEDYZ disk do NOT flow to the DO droplet yet
+  disk -> ingest [style=dashed, label=" not connected ", fontcolor=gray40, color=gray40];
+}

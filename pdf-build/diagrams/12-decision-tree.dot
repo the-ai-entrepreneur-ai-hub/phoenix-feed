@@ -1,0 +1,31 @@
+digraph decision {
+  rankdir=TB;
+  graph [fontname="Times New Roman", fontsize=11, splines=ortho, nodesep=0.5, ranksep=0.6, bgcolor=white];
+  node  [fontname="Times New Roman", fontsize=10, style="filled", fillcolor=white, color=black, penwidth=1.0];
+  edge  [fontname="Times New Roman", fontsize=9, color=black, arrowsize=0.7];
+
+  start [label="Phoenix dashboard backend\nis live on DO droplet\n(verified 2026-05-05)", shape=box, penwidth=1.5];
+
+  q1 [label="Need accuracy > 85 percent\nfor scanner transcripts?", shape=diamond];
+  q2 [label="Plan to add more cities\nbeyond Phoenix\n(Mesa, Tucson, Tempe)?", shape=diamond];
+  q3 [label="Comfortable paying\n200 dollars per month\nfor cloud GPU forever?", shape=diamond];
+  q4 [label="Confident the Inspiron\n3910 chassis can fit a\nfull-size GPU and PSU?", shape=diamond];
+
+  optA  [label="OPTION A\nStatus quo on LEDYZ\n80 dollars one-time\n0 dollars / month", shape=box];
+  optB  [label="OPTION B (recommended)\nDedicated GPU workstation\n1,280 dollars one-time\n21.60 dollars / month", shape=box, penwidth=2.0];
+  optC  [label="OPTION C\nCloud GPU transcription\n80 dollars one-time\n170 to 320 dollars / month", shape=box];
+  optD  [label="OPTION D (risky)\nUpgrade LEDYZ in place\n400 to 700 dollars\n50 percent chance to brick", shape=box];
+
+  start -> q1;
+  q1 -> optA [label=" no "];
+  q1 -> q2   [label=" yes "];
+
+  q2 -> optA [label=" no "];
+  q2 -> q3   [label=" yes "];
+
+  q3 -> optC [label=" yes "];
+  q3 -> q4   [label=" no "];
+
+  q4 -> optD [label=" yes "];
+  q4 -> optB [label=" no "];
+}

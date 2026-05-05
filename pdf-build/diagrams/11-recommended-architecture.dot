@@ -1,0 +1,66 @@
+digraph recommended {
+  rankdir=LR;
+  graph [fontname="Times New Roman", fontsize=11, splines=ortho, nodesep=0.4, ranksep=0.8, bgcolor=white];
+  node  [fontname="Times New Roman", fontsize=10, shape=box, style="filled", fillcolor=white, color=black, penwidth=1.0];
+  edge  [fontname="Times New Roman", fontsize=9, color=black, arrowsize=0.7];
+
+  subgraph cluster_ledyz {
+    label = "LEDYZ — radio brain (existing)";
+    fontname = "Times New Roman";
+    fontsize = 10;
+    style = "dashed";
+    color = black;
+    margin = 12;
+
+    sds100   [label="Uniden SDS100\n(USB)"];
+    proscan  [label="ProScan"];
+    sdrplay  [label="SDRplay RSPdx\n(USB)"];
+    sdrtrunk [label="SDR-Trunk + RadioReference\ntalkgroup database"];
+    relay    [label="audio_relay.py\nOpus encoder"];
+  }
+
+  subgraph cluster_workstation {
+    label = "New workstation — AI brain (1,200 dollars)";
+    fontname = "Times New Roman";
+    fontsize = 10;
+    style = "solid";
+    color = black;
+    penwidth = 1.5;
+    margin = 12;
+
+    receiver [label="audio_receiver.py"];
+    fwhisper [label="faster-whisper large-v3\nNVIDIA RTX 4060 Ti 16 GB"];
+    poster   [label="transcript poster\n+ initial_prompt biasing"];
+  }
+
+  subgraph cluster_do {
+    label = "DigitalOcean droplet — already deployed";
+    fontname = "Times New Roman";
+    fontsize = 10;
+    style = "dashed";
+    color = black;
+    margin = 12;
+
+    phx     [label="Phoenix Fire\nArcGIS endpoint"];
+    ingest  [label="ingester"];
+    txapi   [label="POST /v1/transcripts"];
+    pg      [label="Postgres + PostGIS"];
+    api     [label="REST API\n+ Caddy TLS"];
+  }
+
+  ios [label="iOS + Android\nCactus Watch apps"];
+
+  sds100 -> proscan;
+  sdrplay -> sdrtrunk;
+  sdrtrunk -> relay;
+  relay -> receiver [label=" LAN\n Opus 32 kbps "];
+  receiver -> fwhisper;
+  fwhisper -> poster;
+  poster -> txapi [label=" HTTPS "];
+
+  phx -> ingest;
+  ingest -> pg;
+  txapi -> pg;
+  pg -> api;
+  api -> ios;
+}

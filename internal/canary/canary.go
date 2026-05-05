@@ -15,10 +15,14 @@ import (
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
-const defaultHTTPTimeout = 20 * time.Second
+const (
+	defaultHTTPTimeout          = 20 * time.Second
+	zeroFeatureFailureThreshold = 3
+)
 
 type Store interface {
 	FeatureCountBaseline(context.Context, string, time.Time) (float64, bool, error)
+	RecentCanaryFeatureCounts(context.Context, string, int) ([]int, error)
 	RecordCanary(context.Context, store.ContractCanaryResult) error
 }
 
@@ -187,12 +191,46 @@ func (c Checker) checkBaseline(ctx context.Context, now time.Time, featureCount 
 		return
 	}
 	if avg > 0 && featureCount == 0 {
-		fail("feature_count", map[string]any{"actual": featureCount, "baseline_avg": avg})
+		priorZeros, err := c.priorZeroFeatureChecks(ctx)
+		if err != nil {
+			fail("feature_count_history_error", err.Error())
+			return
+		}
+		consecutive := priorZeros + 1
+		detail := map[string]any{
+			"actual":       featureCount,
+			"baseline_avg": avg,
+			"consecutive":  consecutive,
+			"threshold":    zeroFeatureFailureThreshold,
+		}
+		if consecutive >= zeroFeatureFailureThreshold {
+			fail("feature_count", detail)
+			return
+		}
+		note("feature_count_zero", detail)
 		return
 	}
 	if avg > 0 && float64(featureCount) > avg*10 {
 		fail("feature_count", map[string]any{"actual": featureCount, "baseline_avg": avg})
 	}
+}
+
+func (c Checker) priorZeroFeatureChecks(ctx context.Context) (int, error) {
+	if c.Store == nil {
+		return 0, nil
+	}
+	counts, err := c.Store.RecentCanaryFeatureCounts(ctx, phxfire.SourceName, zeroFeatureFailureThreshold-1)
+	if err != nil {
+		return 0, err
+	}
+	zeros := 0
+	for _, count := range counts {
+		if count != 0 {
+			break
+		}
+		zeros++
+	}
+	return zeros, nil
 }
 
 func actualFieldNames(raw rawArcGIS) []string {

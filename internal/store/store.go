@@ -651,5 +651,32 @@ func (s *Store) RecordCanary(ctx context.Context, result ContractCanaryResult) e
 	return nil
 }
 
+func (s *Store) RecentCanaryFeatureCounts(ctx context.Context, source string, limit int) ([]int, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT COALESCE(feature_count, 0)
+		FROM contract_canary
+		WHERE source = $1
+		ORDER BY checked_at DESC
+		LIMIT $2`, source, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recent canary feature counts %s: %w", source, err)
+	}
+	defer rows.Close()
+
+	counts := []int{}
+	for rows.Next() {
+		var count int
+		if err := rows.Scan(&count); err != nil {
+			return nil, err
+		}
+		counts = append(counts, count)
+	}
+	return counts, rows.Err()
+}
+
 // Ping is a thin wrapper for the API health endpoint.
 func (s *Store) Ping(ctx context.Context) error { return s.pool.Ping(ctx) }

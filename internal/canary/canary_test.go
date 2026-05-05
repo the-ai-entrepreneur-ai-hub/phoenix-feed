@@ -14,14 +14,19 @@ import (
 )
 
 type fakeCanaryStore struct {
-	baseline      float64
-	hasBaseline   bool
-	recorded      []store.ContractCanaryResult
-	recordedError error
+	baseline            float64
+	hasBaseline         bool
+	recentFeatureCounts []int
+	recorded            []store.ContractCanaryResult
+	recordedError       error
 }
 
 func (f *fakeCanaryStore) FeatureCountBaseline(_ context.Context, _ string, _ time.Time) (float64, bool, error) {
 	return f.baseline, f.hasBaseline, nil
+}
+
+func (f *fakeCanaryStore) RecentCanaryFeatureCounts(_ context.Context, _ string, _ int) ([]int, error) {
+	return f.recentFeatureCounts, nil
 }
 
 func (f *fakeCanaryStore) RecordCanary(_ context.Context, result store.ContractCanaryResult) error {
@@ -110,6 +115,52 @@ func TestCheckFailsBadDate(t *testing.T) {
 	}
 }
 
+func TestCheckNotesSingleZeroFeatureCount(t *testing.T) {
+	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
+	srv := httptest.NewServer(jsonHandler(zeroFeatureCanaryBody()))
+	defer srv.Close()
+
+	result, err := Checker{
+		URL:    srv.URL,
+		Store:  &fakeCanaryStore{baseline: 10, hasBaseline: true},
+		Client: srv.Client(),
+		Now:    func() time.Time { return now },
+		Log:    slog.Default(),
+	}.Check(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Passed {
+		t.Fatalf("passed = false, drift = %s", string(result.Drift))
+	}
+	if !strings.Contains(string(result.Drift), "feature_count_zero") {
+		t.Fatalf("drift = %s, want informational feature_count_zero note", string(result.Drift))
+	}
+}
+
+func TestCheckFailsAfterThreeConsecutiveZeroFeatureCounts(t *testing.T) {
+	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
+	srv := httptest.NewServer(jsonHandler(zeroFeatureCanaryBody()))
+	defer srv.Close()
+
+	result, err := Checker{
+		URL:    srv.URL,
+		Store:  &fakeCanaryStore{baseline: 10, hasBaseline: true, recentFeatureCounts: []int{0, 0}},
+		Client: srv.Client(),
+		Now:    func() time.Time { return now },
+		Log:    slog.Default(),
+	}.Check(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Passed {
+		t.Fatal("passed = true, want false after three consecutive zero-feature checks")
+	}
+	if !strings.Contains(string(result.Drift), "feature_count") {
+		t.Fatalf("drift = %s", string(result.Drift))
+	}
+}
+
 func TestRunRecordsCanaryResult(t *testing.T) {
 	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
 	srv := httptest.NewServer(jsonHandler(validCanaryBody(now.Add(-time.Hour).UnixMilli())))
@@ -163,6 +214,26 @@ func validCanaryBody(dateMillis int64) string {
 			},
 			"geometry": map[string]float64{"x": -111.84006, "y": 33.40284},
 		}},
+	}
+	b, _ := json.Marshal(body)
+	return string(b)
+}
+
+func zeroFeatureCanaryBody() string {
+	body := map[string]any{
+		"fields": []map[string]string{
+			{"name": "OBJECTID"},
+			{"name": "Incident"},
+			{"name": "Nature"},
+			{"name": "NatureDesc"},
+			{"name": "Units"},
+			{"name": "Channel"},
+			{"name": "SymbolCode"},
+			{"name": "Date"},
+			{"name": "GenLocInfo"},
+		},
+		"spatialReference": map[string]int{"wkid": 4326},
+		"features":         []map[string]any{},
 	}
 	b, _ := json.Marshal(body)
 	return string(b)

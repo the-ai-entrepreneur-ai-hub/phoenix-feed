@@ -18,7 +18,7 @@ Ship the Phoenix Fire data quality fixes and public API polish on `feat/data-qua
 - [x] B2: Add code dictionary helpers and `GET /v1/codes` handler with tests.
 - [x] B5: Add concise static OpenAPI document at `GET /v1/openapi.json` with tests.
 - [x] A5: Add root JSON handler at `GET /` with tests.
-- [ ] B6: Change canary zero-feature behavior to require three consecutive zero checks before failure; single zero logs/stores INFO-level drift only.
+- [x] B6: Change canary zero-feature behavior to require three consecutive zero checks before failure; single zero logs/stores INFO-level drift only.
 - [ ] A2: Add `cmd/backfill_units` one-shot command that re-parses raw Phoenix `Units`, updates `incidents.units`, rebuilds `incident_units`, and reports scanned/updated/smashed counts.
 - [ ] C1/C2: Update README and architecture docs for new endpoints and fields if Group A+B fit within budget.
 - [ ] Verify: run targeted tests, `go test ./...`, `go build ./...`, `go mod tidy && git diff go.mod go.sum`.

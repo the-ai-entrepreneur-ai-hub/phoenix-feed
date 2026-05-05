@@ -21,13 +21,13 @@
 - [x] Add `ALLOWED_ORIGINS` config parsing with empty default.
 - [x] Change CORS middleware to allow no-Origin native requests, echo only configured origins, and reject disallowed preflights.
 - [x] Add tests for no Origin, allowed Origin, denied Origin, and denied preflight.
-- [ ] Deploy the API and verify `/v1/health` returns 200.
-- [ ] Commit `feat(W3): lock down CORS origins`.
+- [x] Deploy the API and verify `/v1/health` returns 200.
+- [x] Commit `feat(W3): lock down CORS origins`.
 
 ## W4. Caddy per-IP rate limit
 
-- [ ] Build Caddy with `github.com/mholt/caddy-ratelimit@v0.1.0`.
-- [ ] Configure one dynamic zone keyed by source IP at 60 requests per minute.
+- [x] Build Caddy with `github.com/mholt/caddy-ratelimit@v0.1.0`.
+- [x] Configure one dynamic zone keyed by source IP at 60 requests per minute.
 - [ ] Verify Caddy returns 429 with `Retry-After` under burst.
 - [ ] Verify the existing anonymous API limiter still returns 429 on a second incident read within 10 minutes.
 - [ ] Commit `feat(W4): add Caddy per-IP rate limiting`.

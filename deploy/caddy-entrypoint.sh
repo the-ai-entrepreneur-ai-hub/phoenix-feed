@@ -49,6 +49,18 @@ EOF
 EOF
 }
 
+write_rate_limit() {
+	cat <<'EOF'
+	rate_limit {
+		zone per_source_ip {
+			key {http.request.remote.host}
+			events 60
+			window 1m
+		}
+	}
+EOF
+}
+
 {
 	printf '%s {\n' "$SITE_ADDRESS"
 	if [ "$SITE_ADDRESS" != "${SITE_ADDRESS#:}" ]; then
@@ -59,6 +71,7 @@ EOF
 		write_tls_policy
 	fi
 	write_security_headers
+	write_rate_limit
 	printf '\treverse_proxy api:8080\n'
 	printf '\thandle_errors {\n'
 	write_security_headers

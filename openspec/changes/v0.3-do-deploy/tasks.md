@@ -24,12 +24,12 @@
 
 ## W2. Manual refresh endpoint
 
-- [ ] Write failing tests for `POST /v1/incidents/refresh` response shape.
-- [ ] Write failing tests for 120-second refresh throttle.
-- [ ] Reuse active cache read path.
-- [ ] Wire route.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W2): manual refresh endpoint`.
+- [x] Write failing tests for `POST /v1/incidents/refresh` response shape.
+- [x] Write failing tests for 120-second refresh throttle.
+- [x] Reuse active cache read path.
+- [x] Wire route.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W2): manual refresh endpoint`.
 
 ## W8. Cactus-facing meta block
 

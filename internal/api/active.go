@@ -15,24 +15,34 @@ import (
 
 func activeIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		filter, err := parseActiveIncidentFilter(r)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		result, err := st.ListActiveIncidents(r.Context(), filter)
-		if err != nil {
-			log.Error("list active incidents", "err", err)
-			writeError(w, http.StatusInternalServerError, "query active incidents")
-			return
-		}
-		if result.Meta.ParserVersion == "" {
-			result.Meta.ParserVersion = cfg.DefaultParserVersion
-		}
-
-		writeJSON(w, http.StatusOK, result)
+		writeActiveIncidents(w, r, st, cfg, log)
 	}
+}
+
+func refreshIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeActiveIncidents(w, r, st, cfg, log)
+	}
+}
+
+func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg Config, log *slog.Logger) {
+	filter, err := parseActiveIncidentFilter(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := st.ListActiveIncidents(r.Context(), filter)
+	if err != nil {
+		log.Error("list active incidents", "err", err)
+		writeError(w, http.StatusInternalServerError, "query active incidents")
+		return
+	}
+	if result.Meta.ParserVersion == "" {
+		result.Meta.ParserVersion = cfg.DefaultParserVersion
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 func parseActiveIncidentFilter(r *http.Request) (store.ActiveIncidentFilter, error) {

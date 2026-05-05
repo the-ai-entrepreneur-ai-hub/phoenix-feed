@@ -4,9 +4,9 @@
 //	https://maps.phoenix.gov/phxfire/rest/services/Active_Incidents__Public/MapServer/0/query
 //
 // The endpoint is unauthenticated, has no published rate limit, and returns
-// ESRI feature JSON. We pass outSR=4326 so the server reprojects to WGS84
-// before responding (saves us from having to reimplement Arizona State Plane
-// Central Zone projection in Go).
+// ESRI feature JSON. We pass outSR={"wkid":4326} so the server reprojects to
+// WGS84 before responding (saves us from having to reimplement Arizona State
+// Plane Central Zone projection in Go).
 package phxfire
 
 import (
@@ -35,6 +35,11 @@ const (
 	defaultQueryURL = "https://maps.phoenix.gov/phxfire/rest/services/Active_Incidents__Public/MapServer/0/query" +
 		"?where=1%3D1&outFields=*&f=json&outSR=%7B%22wkid%22%3A4326%7D"
 	defaultTimeout = 15 * time.Second
+
+	// Phoenix's IIS/ArcGIS Web Adaptor returns HTTP 500 for a User-Agent
+	// containing a non-ASCII section-sign byte sequence (observed 2026-05-05
+	// from app-ingester-1). Keep this header ASCII-only.
+	defaultUserAgent = "phoenix-feed/0.1 (+architecture.md section 9)"
 )
 
 var expectedFields = []string{
@@ -103,7 +108,7 @@ func (c *Client) Poll(ctx context.Context) model.PollResult {
 		return res
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "phoenix-feed/0.1 (+architecture.md §9)")
+	req.Header.Set("User-Agent", defaultUserAgent)
 
 	resp, err := c.httpClient.Do(req)
 	res.FinishedAt = time.Now().UTC()

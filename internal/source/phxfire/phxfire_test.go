@@ -27,6 +27,8 @@ const sampleResponse = `{
 	]
 }`
 
+const productionSuccessResponse = `{"displayFieldName":"Incident","fieldAliases":{"OBJECTID":"OBJECTID","Incident":"Incident","Nature":"Nature","NatureDesc":"NatureDesc","Units":"Units","Channel":"Channel","SymbolCode":"SymbolCode","Date":"Date","GenLocInfo":"GenLocInfo"},"geometryType":"esriGeometryPoint","spatialReference":{"wkid":4326,"latestWkid":4326},"fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID"},{"name":"Incident","type":"esriFieldTypeString","alias":"Incident","length":9},{"name":"Nature","type":"esriFieldTypeString","alias":"Nature","length":50},{"name":"NatureDesc","type":"esriFieldTypeString","alias":"NatureDesc","length":255},{"name":"Units","type":"esriFieldTypeString","alias":"Units","length":2000},{"name":"Channel","type":"esriFieldTypeString","alias":"Channel","length":50},{"name":"SymbolCode","type":"esriFieldTypeString","alias":"SymbolCode","length":255},{"name":"Date","type":"esriFieldTypeDate","alias":"Date","length":8},{"name":"GenLocInfo","type":"esriFieldTypeString","alias":"GenLocInfo","length":2000}],"features":[]}`
+
 func TestParseUnits_HTMLEntityDecode(t *testing.T) {
 	got := parseUnits("E2203:&#160;On&#160;Scene,L24:&#160;Dispatched")
 	if len(got) != 2 {
@@ -81,6 +83,16 @@ func TestParseFeatures_Sample(t *testing.T) {
 	}
 }
 
+func TestParseFeatures_ProductionSuccessPayload(t *testing.T) {
+	incs, err := ParseFeatures([]byte(productionSuccessResponse))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(incs) != 0 {
+		t.Fatalf("Phoenix production payload currently has zero features, got %d incidents", len(incs))
+	}
+}
+
 func TestParseFeatures_RejectsImplausibleCoords(t *testing.T) {
 	body := `{"features":[{"attributes":{"Incident":"X1","Date":1},"geometry":{"x":750000,"y":900000}}]}`
 	incs, err := parseFeatures([]byte(body))
@@ -89,6 +101,33 @@ func TestParseFeatures_RejectsImplausibleCoords(t *testing.T) {
 	}
 	if len(incs) != 0 {
 		t.Errorf("expected implausible coord to be dropped, got %v", incs)
+	}
+}
+
+func TestPoll_UsesASCIIUserAgent(t *testing.T) {
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.UserAgent()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(sampleResponse))
+	}))
+	defer srv.Close()
+
+	c := New().WithURL(srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res := c.Poll(ctx)
+	if !res.Success() {
+		t.Fatalf("poll failed: %v (status=%d)", res.Err, res.StatusCode)
+	}
+	const wantUA = "phoenix-feed/0.1 (+architecture.md section 9)"
+	if gotUA != wantUA {
+		t.Fatalf("User-Agent = %q, want %q", gotUA, wantUA)
+	}
+	if !isASCII(gotUA) {
+		t.Fatalf("User-Agent must be ASCII-only, got %q", gotUA)
 	}
 }
 
@@ -117,4 +156,13 @@ func TestPoll_RoundTrip(t *testing.T) {
 	if res.ParserVersion != ParserVersion {
 		t.Errorf("parser version not set")
 	}
+}
+
+func isASCII(s string) bool {
+	for _, r := range s {
+		if r > 127 {
+			return false
+		}
+	}
+	return true
 }

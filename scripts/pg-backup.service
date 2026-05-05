@@ -1,0 +1,15 @@
+[Unit]
+Description=Cactus Watch — daily Postgres backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pg_backup_local.sh
+Nice=10
+IOSchedulingClass=idle
+ProtectSystem=full
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

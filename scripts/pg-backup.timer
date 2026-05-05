@@ -1,0 +1,13 @@
+[Unit]
+Description=Cactus Watch — daily Postgres backup timer
+
+[Timer]
+# Run daily at 09:00 UTC (~02:00 Phoenix local in standard time).
+# This is a quiet hour for Phoenix Fire dispatch traffic and well clear of
+# DigitalOcean's automated weekly volume snapshot window.
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

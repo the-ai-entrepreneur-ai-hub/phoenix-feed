@@ -81,13 +81,13 @@
 
 ## Closeout
 
-- [ ] Run `go vet ./...`.
-- [ ] Run `go test ./...`.
-- [ ] Run `go test -cover ./...`.
-- [ ] Run `go build ./...`.
-- [ ] Run `docker compose -f docker-compose.dev.yml config`.
-- [ ] Run `docker compose -f docker-compose.prod.yml config`.
-- [ ] Run `scripts/smoke.sh`.
-- [ ] Run `scripts/smoke.ps1`.
-- [ ] Validate `cloud-init.yml`.
-- [ ] Run `openspec validate v0.3-do-deploy`.
+- [x] Run `go vet ./...`.
+- [x] Run `go test ./...`.
+- [x] Run `go test -cover ./...`.
+- [x] Run `go build ./...`.
+- [x] Run `docker compose -f docker-compose.dev.yml config`.
+- [x] Run `docker compose -f docker-compose.prod.yml config`.
+- [ ] Run `scripts/smoke.sh`. Blocked locally: Bash does not have `go` on `PATH`.
+- [ ] Run `scripts/smoke.ps1`. Blocked locally: Docker Desktop daemon pipe is unavailable.
+- [x] Validate `cloud-init.yml`.
+- [x] Run `openspec validate v0.3-do-deploy`.

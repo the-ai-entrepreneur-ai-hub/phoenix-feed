@@ -63,6 +63,12 @@ On Windows:
 .\scripts\smoke.ps1
 ```
 
+Against an already-running deployment:
+
+```bash
+SMOKE_EXTERNAL=1 API_URL=https://alerts.example.com CLIENT_ID=owner-smoke scripts/smoke.sh
+```
+
 Open the web client directly from disk:
 
 ```text
@@ -119,6 +125,8 @@ go test ./...
 go build ./...
 docker compose -f docker-compose.dev.yml config
 docker compose -f docker-compose.prod.yml --profile tools config
+python -m yamllint cloud-init.yml
+openspec validate v0.3-do-deploy
 ```
 
 ## Build the PDFs

@@ -8,6 +8,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.dev.yml}"
 DB_DSN="${DATABASE_URL:-postgres://phoenix:phoenix@localhost:5432/phoenix_feed?sslmode=disable}"
 API_URL="${API_URL:-http://localhost:8080}"
 CLIENT_ID="${CLIENT_ID:-smoke-device}"
+SMOKE_EXTERNAL="${SMOKE_EXTERNAL:-0}"
 
 API_PID=""
 INGESTER_PID=""
@@ -83,9 +84,17 @@ expect_active_meta_and_rate_limit() {
   fi
 }
 
+require_cmd curl
+
+if [[ "$SMOKE_EXTERNAL" == "1" ]]; then
+  wait_for_api
+  expect_active_meta_and_rate_limit
+  echo "smoke ok"
+  exit 0
+fi
+
 require_cmd docker
 require_cmd go
-require_cmd curl
 
 docker compose -f "$COMPOSE_FILE" up -d db
 wait_for_db

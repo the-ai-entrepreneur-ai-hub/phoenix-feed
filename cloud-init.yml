@@ -18,13 +18,28 @@ write_files:
 
       PUBLIC_REPO_URL="${PUBLIC_REPO_URL:-https://example.com/owner/phoenix-feed.git}"
       APP_DIR="/opt/phoenix-feed/app"
+      DOCKER_KEYRING="/etc/apt/keyrings/docker.asc"
 
       install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-      chmod a+r /etc/apt/keyrings/docker.asc
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+      curl -fsSL \
+        https://download.docker.com/linux/ubuntu/gpg \
+        -o "${DOCKER_KEYRING}"
+      chmod a+r "${DOCKER_KEYRING}"
+      ARCH="$(dpkg --print-architecture)"
+      . /etc/os-release
+      DOCKER_APT_URL="https://download.docker.com/linux/ubuntu"
+      DOCKER_APT_REPO="deb [arch=${ARCH} signed-by=${DOCKER_KEYRING}]"
+      DOCKER_APT_REPO="${DOCKER_APT_REPO} ${DOCKER_APT_URL}"
+      DOCKER_APT_REPO="${DOCKER_APT_REPO} ${VERSION_CODENAME} stable"
+      printf '%s\n' "$DOCKER_APT_REPO" \
+        > /etc/apt/sources.list.d/docker.list
       apt-get update
-      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      apt-get install -y \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin
 
       systemctl enable --now docker
 
@@ -51,7 +66,10 @@ write_files:
       docker compose --env-file .env -f docker-compose.prod.yml up -d db
 
       for i in $(seq 1 60); do
-        if docker compose --env-file .env -f docker-compose.prod.yml exec -T db pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null 2>&1; then
+        if docker compose --env-file .env -f docker-compose.prod.yml \
+          exec -T db pg_isready \
+          -U "${POSTGRES_USER}" \
+          -d "${POSTGRES_DB}" >/dev/null 2>&1; then
           break
         fi
         if [ "$i" -eq 60 ]; then
@@ -61,10 +79,16 @@ write_files:
         sleep 2
       done
 
-      docker compose --env-file .env -f docker-compose.prod.yml exec -T db psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" < db/schema.sql
+      docker compose --env-file .env -f docker-compose.prod.yml \
+        exec -T db psql \
+        -U "${POSTGRES_USER}" \
+        -d "${POSTGRES_DB}" < db/schema.sql
       for migration in db/migrations/*.sql; do
         [ -f "$migration" ] || continue
-        docker compose --env-file .env -f docker-compose.prod.yml exec -T db psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" < "$migration"
+        docker compose --env-file .env -f docker-compose.prod.yml \
+          exec -T db psql \
+          -U "${POSTGRES_USER}" \
+          -d "${POSTGRES_DB}" < "$migration"
       done
 
       docker compose --env-file .env -f docker-compose.prod.yml up -d

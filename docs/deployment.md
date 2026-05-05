@@ -77,7 +77,7 @@ Record the printed `api_key` immediately. It is not stored in plaintext.
 From your laptop:
 
 ```bash
-API_URL=https://alerts.example.com CLIENT_ID=owner-smoke scripts/smoke.sh
+SMOKE_EXTERNAL=1 API_URL=https://alerts.example.com CLIENT_ID=owner-smoke scripts/smoke.sh
 curl -i https://alerts.example.com/v1/health
 curl -i -H "X-API-Key: <paid-key>" https://alerts.example.com/v1/incidents/active
 ```

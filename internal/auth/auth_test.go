@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"testing"
 )
 
@@ -50,5 +51,31 @@ func TestTierFromString(t *testing.T) {
 		if ok != tt.ok || got != tt.want {
 			t.Fatalf("TierFromString(%q) = %q,%v; want %q,%v", tt.raw, got, ok, tt.want, tt.ok)
 		}
+	}
+}
+
+func TestIdentityFromContextDefaultsToAnonymousFree(t *testing.T) {
+	got := IdentityFromContext(context.Background())
+
+	if got.Tier != TierFree {
+		t.Fatalf("tier = %q, want %q", got.Tier, TierFree)
+	}
+	if !got.Anonymous {
+		t.Fatal("identity should default to anonymous")
+	}
+}
+
+func TestWithIdentityRoundTrip(t *testing.T) {
+	want := Identity{
+		Tier:      TierPaid,
+		KeyID:     42,
+		KeyHash:   "hash",
+		ClientID:  "client",
+		Anonymous: false,
+	}
+
+	got := IdentityFromContext(WithIdentity(context.Background(), want))
+	if got != want {
+		t.Fatalf("identity = %+v, want %+v", got, want)
 	}
 }

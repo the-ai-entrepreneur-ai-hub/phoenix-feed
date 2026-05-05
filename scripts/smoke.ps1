@@ -7,6 +7,7 @@ $ComposeFile = if ($env:COMPOSE_FILE) { $env:COMPOSE_FILE } else { "docker-compo
 $DbDsn = if ($env:DATABASE_URL) { $env:DATABASE_URL } else { "postgres://phoenix:phoenix@localhost:5432/phoenix_feed?sslmode=disable" }
 $ApiUrl = if ($env:API_URL) { $env:API_URL } else { "http://localhost:8080" }
 $ClientID = if ($env:CLIENT_ID) { $env:CLIENT_ID } else { "smoke-device" }
+$SmokeExternal = $env:SMOKE_EXTERNAL -eq "1"
 
 $apiProcess = $null
 $ingesterProcess = $null
@@ -80,6 +81,13 @@ function Assert-ActiveMetaAndRateLimit {
     }
 }
 
+if ($SmokeExternal) {
+    Wait-ForAPI
+    Assert-ActiveMetaAndRateLimit
+    Write-Host "smoke ok"
+    exit 0
+}
+
 Require-Command docker
 Require-Command go
 
@@ -87,7 +95,6 @@ docker compose -f $ComposeFile up -d db
 Wait-ForDB
 Apply-Schema
 
-$ingesterEnv = "DATABASE_URL=$DbDsn;POLL_INTERVAL=1s;POLL_JITTER=0s"
 $ingesterProcess = Start-Process -FilePath "powershell" -ArgumentList "-NoProfile", "-Command", "`$env:DATABASE_URL='$DbDsn'; `$env:POLL_INTERVAL='1s'; `$env:POLL_JITTER='0s'; go run ./cmd/ingester" -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 30
 if (-not $ingesterProcess.HasExited) { Stop-Process -Id $ingesterProcess.Id -Force }

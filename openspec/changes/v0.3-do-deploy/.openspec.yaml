@@ -1,0 +1,3 @@
+schema: spec-driven
+created: 2026-05-05
+note: "Scaffolded manually because OpenSpec 1.2.0 rejects dots in change names, while the owner requested openspec/changes/v0.3-do-deploy/ exactly."

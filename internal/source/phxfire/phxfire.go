@@ -29,8 +29,11 @@ const (
 	SourceName    = "phoenix-fire-mapserver"
 	ParserVersion = "phx-fire-2026-05"
 
+	// outSR is sent as a JSON-encoded object ({"wkid":4326}) rather than the
+	// integer shorthand. Phoenix's ArcGIS server intermittently 500s on the
+	// integer form (observed 2026-05-05) but accepts the JSON form reliably.
 	defaultQueryURL = "https://maps.phoenix.gov/phxfire/rest/services/Active_Incidents__Public/MapServer/0/query" +
-		"?where=1%3D1&outFields=*&f=json&outSR=4326"
+		"?where=1%3D1&outFields=*&f=json&outSR=%7B%22wkid%22%3A4326%7D"
 	defaultTimeout = 15 * time.Second
 )
 

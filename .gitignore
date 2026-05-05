@@ -29,6 +29,8 @@ vendor/
 .env
 .env.local
 *.local
+*.local.yml
+cloud-init.local.yml
 
 # Logs
 *.log

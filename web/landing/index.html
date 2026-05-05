@@ -150,6 +150,8 @@
     <h1>Live Phoenix metro fire and EMS incidents, on your phone.</h1>
     <p class="tagline">Know what's happening in your neighborhood the moment dispatch sends a unit. No newsroom delay, no police-scanner clutter — just clear, current incidents pulled directly from the City of Phoenix Fire Department's public feed.</p>
 
+    <p id="live-stats" style="font-size:0.95rem; color:var(--muted); margin:0 0 2rem; opacity:0; transition:opacity 0.4s ease;"></p>
+
     <p>
       <a class="cta" href="mailto:tradebridge2026@gmail.com?subject=Cactus%20Watch%20beta%20interest">Join the beta</a>
       <a class="cta secondary" href="#about">Learn more</a>
@@ -177,11 +179,39 @@
     <footer>
       <div class="copyright">© 2026 Cactus Watch</div>
       <div class="links">
+        <a href="/about">About</a>
+        <a href="/faq">FAQ</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="mailto:tradebridge2026@gmail.com">Contact</a>
       </div>
     </footer>
+
+    <script>
+      // Live stats widget — fetches /v1/stats from the API. Degrades silently
+      // on 404 (endpoint not deployed yet) or any other error so the page
+      // always renders cleanly.
+      (function () {
+        const slot = document.getElementById('live-stats');
+        if (!slot) return;
+        const api = 'https://feed.cactuswatch.com/v1/stats';
+        fetch(api, { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (!d || typeof d.current_active_count !== 'number') return;
+            const n = d.current_active_count;
+            const today = d.today_total_incidents;
+            const age = d.data_age_seconds;
+            const txt = (today != null)
+              ? `Currently tracking ${n} active incident${n === 1 ? '' : 's'} in Phoenix · ${today} dispatched today`
+              : `Currently tracking ${n} active incident${n === 1 ? '' : 's'} in Phoenix`;
+            slot.textContent = txt;
+            slot.style.opacity = '1';
+            if (age != null && age < 120) slot.title = `Data refreshed ${age}s ago`;
+          })
+          .catch(() => { /* silent — widget hides if endpoint unavailable */ });
+      })();
+    </script>
   </div>
 </body>
 </html>

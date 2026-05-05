@@ -13,14 +13,14 @@
 
 ## W1. Per-tier rate limiting
 
-- [ ] Add `golang.org/x/time/rate`.
-- [ ] Add tier-aware limiter package.
-- [ ] Write unit tests for free, paid, retry-after, and health bypass behavior.
-- [ ] Write concurrent burst integration-style limiter test.
-- [ ] Add API middleware for active and detail routes.
-- [ ] Document Redis swap path in `docs/architecture.md`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W1): tier-aware rate limits`.
+- [x] Add `golang.org/x/time/rate`.
+- [x] Add tier-aware limiter package.
+- [x] Write unit tests for free, paid, retry-after, and health bypass behavior.
+- [x] Write concurrent burst integration-style limiter test.
+- [x] Add API middleware for active and detail routes.
+- [x] Document Redis swap path in `docs/architecture.md`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W1): tier-aware rate limits`.
 
 ## W2. Manual refresh endpoint
 

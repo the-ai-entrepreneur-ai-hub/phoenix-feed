@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/abusedmindset/phoenix-feed/internal/ratelimit"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
@@ -27,6 +28,7 @@ type Config struct {
 	PaidTierEnabled      bool
 	Sources              []string
 	StaleAfter           time.Duration
+	RateLimiter          *ratelimit.Limiter
 	Now                  func() time.Time
 }
 
@@ -45,8 +47,13 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	limiter := cfg.RateLimiter
+	if limiter == nil {
+		limiter = ratelimit.NewDefault()
+	}
+
+	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/history", historyPlaceholderHandler(cfg))
-	r.Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
+	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
 	r.Get("/v1/health", healthHandler(st, cfg, log))
 }

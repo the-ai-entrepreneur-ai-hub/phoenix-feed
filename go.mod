@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/jackc/pgx/v5 v5.7.2
+	golang.org/x/time v0.10.0
 )
 
 require (

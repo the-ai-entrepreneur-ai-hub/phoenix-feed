@@ -128,6 +128,8 @@ Endpoints (v1):
 
 Auth: `X-API-Key` is optional. Missing keys are treated as anonymous free clients and rate limited by `X-Client-ID`, `X-Forwarded-For`, or IP fallback. Present keys are SHA-256 hashed, looked up in `api_keys`, and resolved to `free` or `paid`; unknown or revoked keys return `401`. Paid keys are issued manually with `cmd/keygen` until billing exists. No client should ever pass through to Phoenix.
 
+Rate limiting is enforced in `cmd/api` with in-memory token buckets in v0.3. Free active/detail reads are limited to one request per 10 minutes per resolved client; paid active/detail reads are limited to one request per 50 seconds per API key; manual refresh is limited to one request per 120 seconds. This assumes a single API process on the v0.3 droplet. When traffic requires multiple API replicas, replace the in-memory buckets with Redis-backed counters keyed by the same identity strings and keep the handler contract unchanged.
+
 ## 9. Compliance
 
 Operating under the Phoenix Open Data Policy and Open Data Terms of Use. Not under ARS § 39-121.03; that statute governs formal records requests, not voluntarily published developer APIs. See `docs/compliance-memo.md` for the full reasoning.

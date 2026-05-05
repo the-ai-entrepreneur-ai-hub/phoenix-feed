@@ -20,7 +20,7 @@ Ship the Phoenix Fire data quality fixes and public API polish on `feat/data-qua
 - [x] A5: Add root JSON handler at `GET /` with tests.
 - [x] B6: Change canary zero-feature behavior to require three consecutive zero checks before failure; single zero logs/stores INFO-level drift only.
 - [ ] A2: Add `cmd/backfill_units` one-shot command that re-parses raw Phoenix `Units`, updates `incidents.units`, rebuilds `incident_units`, and reports scanned/updated/smashed counts.
-- [ ] C1/C2: Update README and architecture docs for new endpoints and fields if Group A+B fit within budget.
+- [x] C1/C2: Update README and architecture docs for new endpoints and fields if Group A+B fit within budget.
 - [ ] Verify: run targeted tests, `go test ./...`, `go build ./...`, `go mod tidy && git diff go.mod go.sum`.
 - [ ] Deploy: push branch, pull on droplet, rebuild `api ingester canary janitor`, run backfill, capture `docs/backfill-2026-05-05.log`.
 - [ ] Verify live: root, active data labels/units, `/v1/stats`, `/v1/codes`, `/v1/openapi.json`, compose health.

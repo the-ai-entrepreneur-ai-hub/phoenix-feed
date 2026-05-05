@@ -16,6 +16,7 @@ import (
 type Store interface {
 	GetIncidentDetail(context.Context, string, string) (store.IncidentDetailResult, error)
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
+	LookupAPIKey(context.Context, string) (store.APIKey, error)
 	Ping(context.Context) error
 	SourceHealth(context.Context, []string) ([]store.SourceHealth, error)
 }
@@ -40,6 +41,7 @@ func Router(st Store, cfg Config, log *slog.Logger) http.Handler {
 // RegisterRoutes adds API routes to an existing chi router.
 func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	r.Use(corsMiddleware)
+	r.Use(authMiddleware(st, log))
 	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})

@@ -2,14 +2,14 @@
 
 ## W3. API key auth
 
-- [ ] Add `db/migrations/0002_api_keys.sql`.
-- [ ] Add auth tier and key hashing helpers.
-- [ ] Write failing auth middleware tests for anonymous, valid, invalid, and revoked keys.
-- [ ] Add store create/lookup API key methods.
-- [ ] Add `cmd/keygen`.
-- [ ] Update `docs/architecture.md` for `api_keys`.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W3): api key auth and keygen`.
+- [x] Add `db/migrations/0002_api_keys.sql`.
+- [x] Add auth tier and key hashing helpers.
+- [x] Write failing auth middleware tests for anonymous, valid, invalid, and revoked keys.
+- [x] Add store create/lookup API key methods.
+- [x] Add `cmd/keygen`.
+- [x] Update `docs/architecture.md` for `api_keys`.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W3): api key auth and keygen`.
 
 ## W1. Per-tier rate limiting
 

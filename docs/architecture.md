@@ -31,12 +31,13 @@ ADOT's developer API for traffic and accident data. Governed by its own develope
 
 ### System architecture
 
-The runtime is four small Go binaries plus Postgres:
+The runtime is five small Go binaries plus Postgres:
 
 - **`cmd/ingester`** — polls one upstream source on a 60s + jitter cadence, writes to Postgres, manages the incident lifecycle. One ingester process per source. Source identity is config not code.
 - **`cmd/canary`** — hourly contract check against each upstream. Verifies field names, output spatial reference, geometry plausibility, feature count sanity. Writes to `contract_canary` and pages on drift.
 - **`cmd/api`** — read only REST/JSON. Serves cached data, applies rate limits, enforces auth for paid endpoints. Includes staleness fields in every response.
 - **`cmd/janitor`** — periodic retention job. Drops `raw` JSONB after 30 days, archives cleared incidents older than 30 days to the cold partition.
+- **`cmd/keygen`** — manual owner-operated key generator. Prints a new API key once and stores only its SHA-256 hash.
 
 A web client and a future mobile client consume the API. Neither ever talks to Phoenix.
 
@@ -49,6 +50,7 @@ Full DDL is in `db/schema.sql`. The five tables in plain English:
 - **`incident_units`** — observed timeline of unit dispatch states. One row per `(unit, status)` interval, collapsing consecutive identical observations.
 - **`incident_events`** — lifecycle log: created, updated, cleared, reopened. Powers the audit view and any "activity" feed in the UI.
 - **`contract_canary`** — one row per scheduled schema check. Stores expected vs actual fields and a structured drift diff.
+- **`api_keys`** — manually issued free/paid API keys. Stores SHA-256 hashes only, with `tier`, `label`, `owner_email`, and `revoked_at`.
 
 Plus the `active_incidents` view, which joins each non cleared incident with the most recent successful poll's start time so every API response can include `source_last_success_at`.
 
@@ -124,7 +126,7 @@ Endpoints (v1):
 - `GET /v1/health` — overall data freshness and per source status
 - Paid only: `POST /v1/geofences`, `GET /v1/notifications`, `POST /v1/webhooks`
 
-Auth: anonymous endpoints rate limited per IP. Authenticated endpoints behind API keys for paying users and for the developer plan. No client should ever pass through to Phoenix.
+Auth: `X-API-Key` is optional. Missing keys are treated as anonymous free clients and rate limited by `X-Client-ID`, `X-Forwarded-For`, or IP fallback. Present keys are SHA-256 hashed, looked up in `api_keys`, and resolved to `free` or `paid`; unknown or revoked keys return `401`. Paid keys are issued manually with `cmd/keygen` until billing exists. No client should ever pass through to Phoenix.
 
 ## 9. Compliance
 
@@ -175,7 +177,8 @@ phoenix-feed/
 │   ├── ingester/                             (Go: per source poll loop)
 │   ├── canary/                               (Go: hourly contract check)
 │   ├── api/                                  (Go: read REST/JSON)
-│   └── janitor/                              (Go: retention + archival)
+│   ├── janitor/                              (Go: retention + archival)
+│   └── keygen/                               (Go: manual API key creation)
 ├── internal/
 │   ├── source/
 │   │   ├── phxfire/                          (Phoenix Fire MapServer adapter)

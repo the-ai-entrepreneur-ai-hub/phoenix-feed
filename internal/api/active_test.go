@@ -26,6 +26,9 @@ type fakeStore struct {
 	pingErr      error
 	sourceHealth []store.SourceHealth
 	healthErr    error
+
+	apiKeys      map[string]store.APIKey
+	lookedUpHash string
 }
 
 func (f *fakeStore) ListActiveIncidents(_ context.Context, filter store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error) {
@@ -45,6 +48,15 @@ func (f *fakeStore) GetIncidentDetail(_ context.Context, source, incidentID stri
 	f.detailSource = source
 	f.detailIncidentID = incidentID
 	return f.detailResult, f.detailErr
+}
+
+func (f *fakeStore) LookupAPIKey(_ context.Context, keyHash string) (store.APIKey, error) {
+	f.lookedUpHash = keyHash
+	key, ok := f.apiKeys[keyHash]
+	if !ok || key.RevokedAt != nil {
+		return store.APIKey{}, store.ErrAPIKeyNotFound
+	}
+	return key, nil
 }
 
 func TestActiveIncidentsEmptyResponseIncludesMeta(t *testing.T) {

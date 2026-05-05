@@ -19,12 +19,12 @@ Ship the Phoenix Fire data quality fixes and public API polish on `feat/data-qua
 - [x] B5: Add concise static OpenAPI document at `GET /v1/openapi.json` with tests.
 - [x] A5: Add root JSON handler at `GET /` with tests.
 - [x] B6: Change canary zero-feature behavior to require three consecutive zero checks before failure; single zero logs/stores INFO-level drift only.
-- [ ] A2: Add `cmd/backfill_units` one-shot command that re-parses raw Phoenix `Units`, updates `incidents.units`, rebuilds `incident_units`, and reports scanned/updated/smashed counts.
+- [x] A2: Add `cmd/backfill_units` one-shot command that re-parses raw Phoenix `Units`, updates `incidents.units`, rebuilds `incident_units`, and reports scanned/updated/smashed counts.
 - [x] C1/C2: Update README and architecture docs for new endpoints and fields if Group A+B fit within budget.
-- [ ] Verify: run targeted tests, `go test ./...`, `go build ./...`, `go mod tidy && git diff go.mod go.sum`.
-- [ ] Deploy: push branch, pull on droplet, rebuild `api ingester canary janitor`, run backfill, capture `docs/backfill-2026-05-05.log`.
-- [ ] Verify live: root, active data labels/units, `/v1/stats`, `/v1/codes`, `/v1/openapi.json`, compose health.
-- [ ] Report: write `docs/codex-overnight-report-2026-05-05.md` with commit list, changed files, tests, backfill results, live proof, and PR-ready summary.
+- [x] Verify: run targeted tests, `go test ./...`, `go build ./...`, `go mod tidy && git diff go.mod go.sum`.
+- [x] Deploy: push branch, pull on droplet, rebuild `api ingester canary janitor`, run backfill, capture `docs/backfill-2026-05-05.log`.
+- [x] Verify live: root, active data labels/units, `/v1/stats`, `/v1/codes`, `/v1/openapi.json`, compose health.
+- [x] Report: write `docs/codex-overnight-report-2026-05-05.md` with commit list, changed files, tests, backfill results, live proof, and PR-ready summary.
 
 ## Files Expected To Change
 | File | Purpose | Risk |

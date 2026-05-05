@@ -147,9 +147,11 @@ UI requirements:
 
 ### Hosting
 
-Phase 1 (free tier MVP): Dan's box via existing ngrok SSH tunnel, same pattern as Cactus Alert. Postgres, ingester, canary, API all on the box.
+Phase 1 (v0.2 local MVP): Dan's box or a developer laptop via the local Docker Compose stack.
 
-Phase 2 (paid tier launch): migrate to a small DO droplet or AWS lightsail instance with a managed Postgres add-on. Decision deferred until traffic demands it.
+Phase 2 (v0.3 Cactus Alert freemium): one DigitalOcean Ubuntu 24.04 droplet (`s-2vcpu-2gb`) running Docker Compose. `cloud-init.yml` installs Docker, clones the public repo, applies `db/schema.sql` plus `db/migrations/*.sql`, and starts `docker-compose.prod.yml`. Caddy terminates TLS and proxies to `cmd/api`.
+
+Phase 3 (scale): split Postgres to a managed database, move API rate-limit buckets to Redis, and run multiple API replicas behind a load balancer.
 
 ### Observability
 

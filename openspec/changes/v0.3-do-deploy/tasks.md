@@ -64,12 +64,12 @@
 
 ## W5. DigitalOcean provisioning
 
-- [ ] Add `cloud-init.yml`.
-- [ ] Add cloud-init syntax validation fallback.
-- [ ] Update architecture deployment notes.
-- [ ] Run available YAML validation.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W5): DigitalOcean cloud-init`.
+- [x] Add `cloud-init.yml`.
+- [x] Add cloud-init syntax validation fallback.
+- [x] Update architecture deployment notes.
+- [x] Run available YAML validation.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W5): DigitalOcean cloud-init`.
 
 ## W7. Deployment runbook
 

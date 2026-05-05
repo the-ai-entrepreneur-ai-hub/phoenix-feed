@@ -101,10 +101,12 @@ services:
     logging: *default-logging
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: deploy/docker/caddy.Dockerfile
     restart: always
     environment:
-      DOMAIN: ${DOMAIN}
+      DOMAIN: ${DOMAIN:-:80}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
     ports:
       - "80:80"

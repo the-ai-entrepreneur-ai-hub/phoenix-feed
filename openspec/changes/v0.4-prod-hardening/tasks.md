@@ -37,15 +37,15 @@
 - [x] Configure JSON access logging to `/var/log/caddy/access.log`.
 - [x] Document that TLS version and cipher suite fields appear only for HTTPS/domain mode; current IP-only HTTP logs do not have TLS fields.
 - [x] Document why JA3 hashing is deferred until revenue justifies a dedicated plugin or proxy tier.
-- [ ] Deploy Caddy and verify `/v1/health` returns 200.
-- [ ] Commit `feat(W5): add Caddy TLS access logging`.
+- [x] Deploy Caddy and verify `/v1/health` returns 200.
+- [x] Commit `feat(W5): add Caddy TLS access logging`.
 
 ## W6. SSH hardening
 
-- [ ] Update cloud-init for SSH port 2200, no password auth, fail2ban, and UFW 80/443/2200.
+- [x] Update cloud-init for SSH port 2200, no password auth, fail2ban, and UFW 80/443/2200.
 - [ ] Apply the same hardening to the live droplet without losing SSH access.
 - [ ] Verify SSH works on 2200 and port 22 is closed.
-- [ ] Document reconnect commands in `docs/ops.md`.
+- [x] Document reconnect commands in `docs/ops.md`.
 - [ ] Commit `chore(W6): harden SSH and firewall`.
 
 ## W7. Postgres and backup hardening

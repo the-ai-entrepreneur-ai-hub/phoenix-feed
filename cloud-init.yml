@@ -5,10 +5,41 @@ package_upgrade: true
 packages:
   - ca-certificates
   - curl
+  - fail2ban
   - git
   - ufw
 
 write_files:
+  - path: /etc/ssh/sshd_config.d/10-phoenix-hardening.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      Port 2200
+      PermitRootLogin prohibit-password
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+
+  - path: /etc/systemd/system/ssh.socket.d/listen.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Socket]
+      ListenStream=
+      ListenStream=2200
+
+  - path: /etc/fail2ban/jail.local
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [sshd]
+      enabled = true
+      port = 2200
+      maxretry = 3
+      findtime = 10m
+      bantime = 1h
+      backend = systemd
+
   - path: /opt/phoenix-feed/bootstrap.sh
     owner: root:root
     permissions: "0755"
@@ -45,7 +76,13 @@ write_files:
 
       install -d -m 0755 /var/log/caddy
 
-      ufw allow OpenSSH
+      systemctl daemon-reload
+      systemctl enable --now fail2ban
+      sshd -t
+      systemctl restart ssh.socket
+      systemctl restart ssh
+
+      ufw allow 2200/tcp
       ufw allow 80/tcp
       ufw allow 443/tcp
       ufw --force enable

@@ -108,12 +108,15 @@ services:
     restart: always
     environment:
       DOMAIN: ${DOMAIN:-:80}
+      LANDING_DOMAIN: ${LANDING_DOMAIN:-}
+      API_DOMAIN: ${API_DOMAIN:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web/landing:/srv/landing:ro
       - /var/log/caddy:/var/log/caddy
       - caddy_data:/data
       - caddy_config:/config

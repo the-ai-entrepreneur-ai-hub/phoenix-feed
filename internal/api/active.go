@@ -5,27 +5,35 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/abusedmindset/phoenix-feed/internal/auth"
+	"github.com/abusedmindset/phoenix-feed/internal/ratelimit"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
+)
+
+const (
+	cactusDisclaimer  = "Not for emergency use; call 911"
+	cactusAttribution = "Data via City of Phoenix Fire Department"
 )
 
 func activeIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeActiveIncidents(w, r, st, cfg, log)
+		writeActiveIncidents(w, r, st, cfg, log, ratelimit.ScopeIncidentRead)
 	}
 }
 
 func refreshIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeActiveIncidents(w, r, st, cfg, log)
+		writeActiveIncidents(w, r, st, cfg, log, ratelimit.ScopeManualRefresh)
 	}
 }
 
-func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg Config, log *slog.Logger) {
+func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg Config, log *slog.Logger, scope ratelimit.Scope) {
 	filter, err := parseActiveIncidentFilter(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -41,8 +49,22 @@ func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg 
 	if result.Meta.ParserVersion == "" {
 		result.Meta.ParserVersion = cfg.DefaultParserVersion
 	}
+	applyCactusMeta(&result.Meta, auth.IdentityFromContext(r.Context()), cfg.RateLimiter, scope)
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+func applyCactusMeta(meta *store.StalenessMeta, identity auth.Identity, limiter *ratelimit.Limiter, scope ratelimit.Scope) {
+	if limiter == nil {
+		limiter = ratelimit.NewDefault()
+	}
+	meta.Disclaimer = cactusDisclaimer
+	meta.Attribution = cactusAttribution
+	meta.RefreshMinSeconds = int(math.Ceil(limiter.RefreshEvery(identity, scope).Seconds()))
+	meta.Tier = string(identity.Tier)
+	if meta.Tier == "" {
+		meta.Tier = string(auth.TierFree)
+	}
 }
 
 func parseActiveIncidentFilter(r *http.Request) (store.ActiveIncidentFilter, error) {

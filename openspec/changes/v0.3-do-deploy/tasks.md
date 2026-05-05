@@ -33,13 +33,13 @@
 
 ## W8. Cactus-facing meta block
 
-- [ ] Extend active/refresh meta response fields.
-- [ ] Write tests for free active metadata.
-- [ ] Write tests for paid active metadata.
-- [ ] Write tests for manual refresh metadata.
-- [ ] Wire resolved auth tier into meta.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W8): Cactus meta block`.
+- [x] Extend active/refresh meta response fields.
+- [x] Write tests for free active metadata.
+- [x] Write tests for paid active metadata.
+- [x] Write tests for manual refresh metadata.
+- [x] Wire resolved auth tier into meta.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W8): Cactus meta block`.
 
 ## W6. Smoke test scripts
 

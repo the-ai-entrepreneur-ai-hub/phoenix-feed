@@ -51,6 +51,7 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	if limiter == nil {
 		limiter = ratelimit.NewDefault()
 	}
+	cfg.RateLimiter = limiter
 
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))

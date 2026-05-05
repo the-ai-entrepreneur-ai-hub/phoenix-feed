@@ -45,6 +45,10 @@ type StalenessMeta struct {
 	SourceLastSuccessAt *time.Time `json:"source_last_success_at"`
 	DataAgeSeconds      *int       `json:"data_age_seconds"`
 	ParserVersion       string     `json:"parser_version"`
+	Disclaimer          string     `json:"disclaimer,omitempty"`
+	Attribution         string     `json:"attribution,omitempty"`
+	RefreshMinSeconds   int        `json:"refresh_min_seconds,omitempty"`
+	Tier                string     `json:"tier,omitempty"`
 }
 
 type ActiveIncident struct {

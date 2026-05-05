@@ -1,0 +1,7 @@
+.git
+bin
+pdf-build/output
+tmp
+*.log
+.env
+node_modules

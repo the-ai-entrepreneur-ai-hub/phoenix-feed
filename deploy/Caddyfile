@@ -1,0 +1,7 @@
+{
+	email {$ADMIN_EMAIL}
+}
+
+{$DOMAIN:localhost} {
+	reverse_proxy api:8080
+}

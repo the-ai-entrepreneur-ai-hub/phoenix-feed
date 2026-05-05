@@ -1,0 +1,123 @@
+x-app-env: &app-env
+  DATABASE_URL: ${DATABASE_URL}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - phxfeed_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: *default-logging
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/api.Dockerfile
+    restart: always
+    environment:
+      <<: *app-env
+      HTTP_ADDR: :8080
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
+    logging: *default-logging
+
+  ingester:
+    build:
+      context: .
+      dockerfile: deploy/docker/ingester.Dockerfile
+    restart: always
+    environment:
+      <<: *app-env
+      POLL_INTERVAL: ${POLL_INTERVAL:-60s}
+      POLL_JITTER: ${POLL_JITTER:-10s}
+      CLEAR_AFTER_MISSES: ${CLEAR_AFTER_MISSES:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *default-logging
+
+  canary:
+    build:
+      context: .
+      dockerfile: deploy/docker/canary.Dockerfile
+    restart: always
+    environment:
+      <<: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *default-logging
+
+  janitor:
+    build:
+      context: .
+      dockerfile: deploy/docker/janitor.Dockerfile
+    restart: always
+    environment:
+      <<: *app-env
+      RAW_RETENTION: ${RAW_RETENTION:-720h}
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *default-logging
+
+  keygen:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: deploy/docker/keygen.Dockerfile
+    environment:
+      <<: *app-env
+      KEY_TIER: ${KEY_TIER:-paid}
+      KEY_LABEL: ${KEY_LABEL:-manual}
+      OWNER_EMAIL: ${OWNER_EMAIL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    environment:
+      DOMAIN: ${DOMAIN}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    logging: *default-logging
+
+volumes:
+  phxfeed_data:
+  caddy_data:
+  caddy_config:

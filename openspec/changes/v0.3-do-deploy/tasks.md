@@ -54,13 +54,13 @@
 
 ## W4. Dockerfiles + production Compose
 
-- [ ] Add per-binary Dockerfiles for `api`, `ingester`, `canary`, `janitor`, and `keygen`.
-- [ ] Add `docker-compose.prod.yml`.
-- [ ] Add `deploy/Caddyfile`.
-- [ ] Add `.env.example`.
-- [ ] Validate compose configs where Docker is available.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `feat(W4): production compose and Dockerfiles`.
+- [x] Add per-binary Dockerfiles for `api`, `ingester`, `canary`, `janitor`, and `keygen`.
+- [x] Add `docker-compose.prod.yml`.
+- [x] Add `deploy/Caddyfile`.
+- [x] Add `.env.example`.
+- [x] Validate compose configs where Docker is available.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `feat(W4): production compose and Dockerfiles`.
 
 ## W5. DigitalOcean provisioning
 

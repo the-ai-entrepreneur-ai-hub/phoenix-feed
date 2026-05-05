@@ -10,6 +10,17 @@ ssh -i ~/.ssh/id_rsa -p 2200 root@64.23.147.218
 
 Port 22 is intentionally closed. Password authentication is disabled, and root login is limited to key-based access with `PermitRootLogin prohibit-password`.
 
+On Ubuntu 24.04, `ssh.socket` is active by default. When changing the SSH port, bind the socket on IPv4 explicitly before restarting it:
+
+```ini
+[Socket]
+ListenStream=
+ListenStream=0.0.0.0:2200
+ListenStream=[::]:2200
+```
+
+Always test a new SSH session on 2200 before removing any previous listener or firewall allowance.
+
 ## Firewall
 
 UFW should allow only:

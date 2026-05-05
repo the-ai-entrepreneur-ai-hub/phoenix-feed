@@ -15,6 +15,7 @@ write_files:
     permissions: "0644"
     content: |
       Port 2200
+      AddressFamily any
       PermitRootLogin prohibit-password
       PasswordAuthentication no
       KbdInteractiveAuthentication no
@@ -26,7 +27,8 @@ write_files:
     content: |
       [Socket]
       ListenStream=
-      ListenStream=2200
+      ListenStream=0.0.0.0:2200
+      ListenStream=[::]:2200
 
   - path: /etc/fail2ban/jail.local
     owner: root:root

@@ -196,6 +196,48 @@ type rawResponse struct {
 	} `json:"features"`
 }
 
+type CodeInfo struct {
+	Code     string `json:"code"`
+	Label    string `json:"label"`
+	Category string `json:"category"`
+}
+
+var codeDictionary = []CodeInfo{
+	{Code: "962", Label: "Vehicle Crash", Category: "traffic"},
+	{Code: "962A", Label: "Vehicle Crash", Category: "traffic"},
+	{Code: "962BC", Label: "Crash Involving Bicycle", Category: "traffic"},
+	{Code: "962MC", Label: "Crash Involving Motorcycle", Category: "traffic"},
+	{Code: "962P", Label: "Crash Involving Pedestrian", Category: "traffic"},
+	{Code: "962X", Label: "Crash Requiring Extrication", Category: "traffic"},
+	{Code: "BRST", Label: "Brush Fire", Category: "fire"},
+	{Code: "CKFOUT", Label: "Check Fire", Category: "fire"},
+	{Code: "CRASH", Label: "Aircraft Down", Category: "rescue"},
+	{Code: "DEBRIS", Label: "Debris Fire", Category: "fire"},
+	{Code: "DUMP", Label: "Dumpster Fire", Category: "fire"},
+	{Code: "FIELD", Label: "Field Fire", Category: "fire"},
+	{Code: "FLOOD", Label: "Check Flooding", Category: "rescue"},
+	{Code: "GAS", Label: "Gas Leak", Category: "hazmat"},
+	{Code: "GAS2-1", Label: "Gas Leak", Category: "hazmat"},
+	{Code: "GRASS", Label: "Grass Fire", Category: "fire"},
+	{Code: "HAZ3-1", Label: "Hazardous Situation", Category: "hazmat"},
+	{Code: "HOUSE", Label: "House Fire", Category: "fire"},
+	{Code: "LOCK", Label: "Lock Out", Category: "rescue"},
+	{Code: "MTNRES", Label: "Mountain Rescue", Category: "rescue"},
+	{Code: "POLE", Label: "Pole Fire", Category: "fire"},
+	{Code: "SNAKE", Label: "Snake Removal", Category: "rescue"},
+	{Code: "STR", Label: "Structure Fire", Category: "fire"},
+	{Code: "TREE", Label: "Tree Fire", Category: "fire"},
+	{Code: "UNKF", Label: "Unknown Fire", Category: "other"},
+	{Code: "VEH", Label: "Vehicle Fire", Category: "fire"},
+	{Code: "WF", Label: "Working Structure Fire", Category: "fire"},
+}
+
+func CodeDictionary() []CodeInfo {
+	out := make([]CodeInfo, len(codeDictionary))
+	copy(out, codeDictionary)
+	return out
+}
+
 // parseFeatures decodes ESRI JSON and normalizes each feature into model.Incident.
 // Returns an error on JSON parse failure; per-feature errors are skipped with
 // the rest of the batch returned.
@@ -227,7 +269,7 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 		featureBytes, _ := json.Marshal(f) // best effort; safe to ignore err
 
 		natureCode := strings.TrimSpace(f.Attributes.Nature)
-		natureDesc := cleanNatureDesc(natureCode, f.Attributes.NatureDesc)
+		natureDesc := NatureDescriptionFor(natureCode, f.Attributes.NatureDesc)
 
 		out = append(out, model.Incident{
 			Source:       SourceName,
@@ -297,7 +339,7 @@ func parseUnits(raw string) []model.Unit {
 	return out
 }
 
-func cleanNatureDesc(code, desc string) string {
+func NatureDescriptionFor(code, desc string) string {
 	code = strings.ToUpper(strings.TrimSpace(code))
 	desc = strings.TrimSpace(desc)
 	override, ok := natureDescOverrides[code]
@@ -308,6 +350,11 @@ func cleanNatureDesc(code, desc string) string {
 	family := numericPrefix(code)
 	if desc == "" || upperDesc == code || strings.HasPrefix(upperDesc, code) || (family != "" && strings.HasPrefix(upperDesc, family+" ")) {
 		return override
+	}
+	if desc == "" {
+		if label, ok := labelForCode(code); ok {
+			return label
+		}
 	}
 	return desc
 }
@@ -329,6 +376,39 @@ func UnitTypeForName(unit string) string {
 		}
 	}
 	return "other"
+}
+
+func LabelForCode(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if label, ok := labelForCode(code); ok {
+		return label
+	}
+	return code
+}
+
+func labelForCode(code string) (string, bool) {
+	for _, item := range codeDictionary {
+		if item.Code == code {
+			return item.Label, true
+		}
+	}
+	return "", false
+}
+
+func SeverityForCode(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	switch code {
+	case "STR", "HOUSE", "WF", "CRASH", "MTNRES":
+		return "high"
+	case "962X", "GRASS", "BRST", "VEH", "DEBRIS", "FLOOD", "TREE":
+		return "medium"
+	case "962", "962A", "LOCK", "SNAKE", "CKFOUT":
+		return "low"
+	}
+	if strings.HasPrefix(code, "HAZ") || strings.HasPrefix(code, "GAS") {
+		return "high"
+	}
+	return "unknown"
 }
 
 func collapseWhitespace(s string) string {

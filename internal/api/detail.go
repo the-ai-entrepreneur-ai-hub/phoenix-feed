@@ -29,6 +29,7 @@ func incidentDetailHandler(st Store, cfg Config, log *slog.Logger) http.HandlerF
 		if result.Meta.ParserVersion == "" {
 			result.Meta.ParserVersion = cfg.DefaultParserVersion
 		}
+		enrichIncidentDetail(result.Incident)
 
 		writeJSON(w, http.StatusOK, result)
 	}

@@ -13,11 +13,11 @@ Ship the Phoenix Fire data quality fixes and public API polish on `feat/data-qua
 - [x] A1: Add failing parser tests for Phoenix space-delimited unit/status pairs, empty units, weird spacing, NB hyphen unit names, and production smashed samples.
 - [x] A1: Replace comma-split `parseUnits` with whitespace token state machine and keep legacy comma sample working.
 - [x] A3/A4/B4: Add nature description overrides, non-nil empty units, and `unit_type` derivation in parser/model with tests.
-- [ ] B3: Add severity derivation to active/detail incident response structs with API tests.
-- [ ] B1: Add `Store.Stats` SQL query and `GET /v1/stats` handler with tests.
-- [ ] B2: Add code dictionary helpers and `GET /v1/codes` handler with tests.
-- [ ] B5: Add concise static OpenAPI document at `GET /v1/openapi.json` with tests.
-- [ ] A5: Add root JSON handler at `GET /` with tests.
+- [x] B3: Add severity derivation to active/detail incident response structs with API tests.
+- [x] B1: Add `Store.Stats` SQL query and `GET /v1/stats` handler with tests.
+- [x] B2: Add code dictionary helpers and `GET /v1/codes` handler with tests.
+- [x] B5: Add concise static OpenAPI document at `GET /v1/openapi.json` with tests.
+- [x] A5: Add root JSON handler at `GET /` with tests.
 - [ ] B6: Change canary zero-feature behavior to require three consecutive zero checks before failure; single zero logs/stores INFO-level drift only.
 - [ ] A2: Add `cmd/backfill_units` one-shot command that re-parses raw Phoenix `Units`, updates `incidents.units`, rebuilds `incident_units`, and reports scanned/updated/smashed counts.
 - [ ] C1/C2: Update README and architecture docs for new endpoints and fields if Group A+B fit within budget.

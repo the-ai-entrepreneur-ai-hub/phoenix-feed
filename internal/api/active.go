@@ -49,6 +49,7 @@ func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg 
 	if result.Meta.ParserVersion == "" {
 		result.Meta.ParserVersion = cfg.DefaultParserVersion
 	}
+	enrichActiveIncidents(result.Incidents)
 	applyCactusMeta(&result.Meta, auth.IdentityFromContext(r.Context()), cfg.RateLimiter, scope)
 
 	writeJSON(w, http.StatusOK, result)

@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/abusedmindset/phoenix-feed/internal/model"
+	"github.com/abusedmindset/phoenix-feed/internal/source/phxfire"
 )
 
 type Store struct {
@@ -56,6 +57,7 @@ type ActiveIncident struct {
 	IncidentID           string       `json:"incident_id"`
 	NatureCode           string       `json:"nature_code,omitempty"`
 	NatureDesc           string       `json:"nature_desc,omitempty"`
+	Severity             string       `json:"severity,omitempty"`
 	Units                []model.Unit `json:"units"`
 	Channel              string       `json:"channel,omitempty"`
 	SymbolCode           string       `json:"symbol_code,omitempty"`
@@ -79,6 +81,7 @@ type IncidentDetail struct {
 	IncidentID   string       `json:"incident_id"`
 	NatureCode   string       `json:"nature_code,omitempty"`
 	NatureDesc   string       `json:"nature_desc,omitempty"`
+	Severity     string       `json:"severity,omitempty"`
 	Units        []model.Unit `json:"units"`
 	Channel      string       `json:"channel,omitempty"`
 	SymbolCode   string       `json:"symbol_code,omitempty"`
@@ -114,6 +117,17 @@ type IncidentDetailResult struct {
 	Incident    *IncidentDetail   `json:"incident"`
 	UnitHistory []UnitObservation `json:"unit_history"`
 	Events      []IncidentEvent   `json:"events"`
+}
+
+type PublicStats struct {
+	CurrentActiveCount  int            `json:"current_active_count"`
+	TodayTotalIncidents int            `json:"today_total_incidents"`
+	TodayByCategory     map[string]int `json:"today_by_category"`
+	Last24hTotal        int            `json:"last_24h_total"`
+	ActiveUnitsNow      int            `json:"active_units_now"`
+	DataAgeSeconds      int            `json:"data_age_seconds"`
+	Tier                string         `json:"tier"`
+	SourceUpdatedAt     time.Time      `json:"-"`
 }
 
 type CanaryHealth struct {
@@ -483,6 +497,56 @@ func (s *Store) LatestSuccessAt(ctx context.Context, source string) (time.Time, 
 		return time.Time{}, nil
 	}
 	return t, err
+}
+
+func (s *Store) PublicStats(ctx context.Context) (PublicStats, error) {
+	const dayStart = `date_trunc('day', NOW() AT TIME ZONE 'America/Phoenix') AT TIME ZONE 'America/Phoenix'`
+	stats := PublicStats{TodayByCategory: map[string]int{}}
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM active_incidents WHERE geom IS NOT NULL)::int,
+			(SELECT COUNT(*) FROM incidents WHERE incident_date >= `+dayStart+`)::int,
+			(SELECT COUNT(*) FROM incidents WHERE incident_date >= NOW() - INTERVAL '24 hours')::int,
+			(SELECT COALESCE(SUM(jsonb_array_length(COALESCE(units, '[]'::jsonb))), 0)::int FROM active_incidents WHERE geom IS NOT NULL),
+			COALESCE(EXTRACT(EPOCH FROM (NOW() - (
+				SELECT started_at FROM source_polls
+				WHERE success = TRUE
+				ORDER BY started_at DESC
+				LIMIT 1
+			)))::int, 0)`,
+	).Scan(&stats.CurrentActiveCount, &stats.TodayTotalIncidents, &stats.Last24hTotal, &stats.ActiveUnitsNow, &stats.DataAgeSeconds)
+	if err != nil {
+		return PublicStats{}, fmt.Errorf("public stats totals: %w", err)
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT COALESCE(NULLIF(nature_code, ''), 'UNKNOWN') AS nature_code, COUNT(*)::int
+		FROM incidents
+		WHERE incident_date >= `+dayStart+`
+		GROUP BY 1
+		ORDER BY 1`)
+	if err != nil {
+		return PublicStats{}, fmt.Errorf("public stats category counts: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var code string
+		var count int
+		if err := rows.Scan(&code, &count); err != nil {
+			return PublicStats{}, err
+		}
+		label := phxfire.LabelForCode(code)
+		if label == "" {
+			label = "Unknown"
+		}
+		stats.TodayByCategory[label] += count
+	}
+	if err := rows.Err(); err != nil {
+		return PublicStats{}, err
+	}
+
+	return stats, nil
 }
 
 // SourceHealth returns freshness and latest canary status for configured sources.

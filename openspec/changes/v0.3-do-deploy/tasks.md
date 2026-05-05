@@ -73,11 +73,11 @@
 
 ## W7. Deployment runbook
 
-- [ ] Add `docs/deployment.md`.
-- [ ] Add `docs/v0.3-summary.md`.
-- [ ] Update `README.md` for v0.3 commands.
-- [ ] Run `go vet ./...` and `go test ./...`.
-- [ ] Commit `docs(W7): deployment runbook`.
+- [x] Add `docs/deployment.md`.
+- [x] Add `docs/v0.3-summary.md`.
+- [x] Update `README.md` for v0.3 commands.
+- [x] Run `go vet ./...` and `go test ./...`.
+- [x] Commit `docs(W7): deployment runbook`.
 
 ## Closeout
 

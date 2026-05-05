@@ -29,6 +29,25 @@ write_tls_policy() {
 EOF
 }
 
+write_security_headers() {
+	cat <<'EOF'
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+		Cross-Origin-Resource-Policy "same-site"
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		Server "cactus-watch"
+EOF
+	if [ "$SITE_ADDRESS" = "${SITE_ADDRESS#:}" ]; then
+		printf '\t\tStrict-Transport-Security "max-age=31536000; includeSubDomains; preload"\n'
+	fi
+	cat <<'EOF'
+	}
+EOF
+}
+
 {
 	printf '%s {\n' "$SITE_ADDRESS"
 	if [ "$SITE_ADDRESS" != "${SITE_ADDRESS#:}" ]; then
@@ -37,9 +56,13 @@ EOF
 		fi
 	else
 		write_tls_policy
-		printf '\theader Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"\n'
 	fi
+	write_security_headers
 	printf '\treverse_proxy api:8080\n'
+	printf '\thandle_errors {\n'
+	write_security_headers
+	printf '\t\trespond "{http.error.status_code} {http.error.status_text}" {http.error.status_code}\n'
+	printf '\t}\n'
 	printf '}\n'
 } > "$SITE_SNIPPET"
 

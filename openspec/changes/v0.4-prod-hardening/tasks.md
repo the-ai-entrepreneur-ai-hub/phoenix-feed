@@ -2,17 +2,17 @@
 
 ## W1. Domain-ready TLS
 
-- [ ] Replace the Caddy deployment so `DOMAIN=:80` serves plain HTTP, a real hostname uses automatic ACME HTTPS, and `DOMAIN=:443 tls internal` uses Caddy internal TLS.
-- [ ] Enforce TLS 1.2 minimum, TLS 1.3 maximum, and TLS 1.2 ECDHE AEAD cipher suites.
-- [ ] Enable HSTS only when `DOMAIN` is a hostname, not when it starts with `:`.
-- [ ] Preserve Caddy's automatic HTTP-to-HTTPS redirect for hostnames.
-- [ ] Deploy Caddy and verify `/v1/health` returns 200.
-- [ ] Commit `feat(W1): add domain-ready Caddy TLS`.
+- [x] Replace the Caddy deployment so `DOMAIN=:80` serves plain HTTP, a real hostname uses automatic ACME HTTPS, and `DOMAIN=:443 tls internal` uses Caddy internal TLS.
+- [x] Enforce TLS 1.2 minimum, TLS 1.3 maximum, and TLS 1.2 ECDHE AEAD cipher suites.
+- [x] Enable HSTS only when `DOMAIN` is a hostname, not when it starts with `:`.
+- [x] Preserve Caddy's automatic HTTP-to-HTTPS redirect for hostnames.
+- [x] Deploy Caddy and verify `/v1/health` returns 200.
+- [x] Commit `feat(W1): add domain-ready Caddy TLS`.
 
 ## W2. Security headers
 
-- [ ] Add Caddy response headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Resource-Policy`, `Content-Security-Policy`, and `Server`.
-- [ ] Apply the headers to upstream responses and Caddy-generated error responses.
+- [x] Add Caddy response headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Resource-Policy`, `Content-Security-Policy`, and `Server`.
+- [x] Apply the headers to upstream responses and Caddy-generated error responses.
 - [ ] Deploy Caddy and verify `curl -I` shows the headers.
 - [ ] Commit `feat(W2): harden API response headers`.
 

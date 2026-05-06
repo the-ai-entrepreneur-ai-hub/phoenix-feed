@@ -59,6 +59,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q /usr/local/bin/ingester /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
     logging: *default-logging
 
   canary:
@@ -71,6 +76,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q /usr/local/bin/canary /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
     logging: *default-logging
 
   janitor:
@@ -84,6 +94,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q /usr/local/bin/janitor /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
     logging: *default-logging
 
   keygen:
@@ -122,6 +137,11 @@ services:
       - caddy_config:/config
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD-SHELL", "caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
     logging: *default-logging
 
 volumes:

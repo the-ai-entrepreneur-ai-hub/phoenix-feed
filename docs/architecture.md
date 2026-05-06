@@ -82,6 +82,8 @@ If a `(source, incident_id)` reappears after `cleared_at` is set, clear the `cle
 
 On every poll where an incident is observed, update `last_seen_at`, `last_seen_poll_id`, and the snapshot fields. Compare with the prior snapshot. If anything material changed (units added, units status changed, location text changed, nature code changed), append to `incident_units` (or extend the existing open interval) and write an `updated` event with the structured delta.
 
+Phoenix's `Units` field is HTML-entity encoded and space-delimited after decoding, not comma-delimited. The parser tokenizes by whitespace; any token ending in `:` starts a unit, and all tokens until the next unit token are that unit's multi-word status. The normalized unit snapshot is always a JSON array and each unit includes an additive `unit_type` derived from the unit prefix.
+
 ## 6. Source switching
 
 Source identity is a string. The ingester binary reads its source name from config. The same process, different config, ingests Phoenix MapServer or scanner+Whisper. The composite primary key `(source, incident_id)` means the database has no opinion about which source is "right" — both can coexist.
@@ -97,11 +99,11 @@ The canary runs hourly per source and asserts:
 1. Endpoint reachable; HTTP 200.
 2. Response includes every field in the parser's expected list.
 3. `outSR=4326` is honored (geometry sanity check: `-180 ≤ x ≤ 180`, `-90 ≤ y ≤ 90`).
-4. `feature_count` is plausible relative to the rolling 7 day baseline (not 0 when baseline is non zero, not 10x baseline).
+4. `feature_count` is plausible relative to the rolling 7 day baseline (not 0 for 3 consecutive checks when baseline is non zero, not 10x baseline).
 5. Date field parses as epoch milliseconds in a recent window.
 6. Sample feature parses cleanly through the production parser.
 
-Any failure writes a row with `passed=false` and the structured drift diff, plus emits an alert. We page on drift before users notice.
+Any failure writes a row with `passed=false` and the structured drift diff, plus emits an alert. A single zero-feature poll writes an informational drift note and remains passing; three consecutive zero-feature checks fail. We page on sustained drift before users notice.
 
 ## 8. API
 
@@ -120,11 +122,18 @@ REST/JSON. All responses include a top level staleness block:
 
 Endpoints (v1):
 
+- `GET /` — service identifier with docs and health links
 - `GET /v1/incidents/active` — bbox or radius filter, optional category filter
+- `POST /v1/incidents/refresh` — manual active cache read, separately throttled
 - `GET /v1/incidents/{source}/{incident_id}` — single incident with full history
 - `GET /v1/incidents/history` — paid only, time range plus filters
+- `GET /v1/stats` — public live counts, active unit count, data age, and free tier marker
+- `GET /v1/codes` — parser code dictionary with labels and categories
+- `GET /v1/openapi.json` — concise OpenAPI document for v1
 - `GET /v1/health` — overall data freshness and per source status
 - Paid only: `POST /v1/geofences`, `GET /v1/notifications`, `POST /v1/webhooks`
+
+Incident responses keep the existing v1 fields and add `severity` derived from `nature_code`. Unit snapshots keep existing `Unit` and `Status` keys and add `unit_type`. Bare Phoenix crash codes are normalized when Phoenix sends only the numeric/truncated label: `962` and `962A` become `Vehicle Crash`; `962BC`, `962P`, `962X`, and `962MC` become cleaner crash subtype labels. Ambiguous Phoenix descriptions such as `GAS2-1` and `CKFOUT` remain source-provided when Phoenix sends a meaningful description.
 
 Auth: `X-API-Key` is optional. Missing keys are treated as anonymous free clients and rate limited by `X-Client-ID`, `X-Forwarded-For`, or IP fallback. Present keys are SHA-256 hashed, looked up in `api_keys`, and resolved to `free` or `paid`; unknown or revoked keys return `401`. Paid keys are issued manually with `cmd/keygen` until billing exists. No client should ever pass through to Phoenix.
 
@@ -181,9 +190,11 @@ phoenix-feed/
 │   ├── ingester/                             (Go: per source poll loop)
 │   ├── canary/                               (Go: hourly contract check)
 │   ├── api/                                  (Go: read REST/JSON)
+│   ├── backfill_units/                       (Go: one-shot data repair)
 │   ├── janitor/                              (Go: retention + archival)
 │   └── keygen/                               (Go: manual API key creation)
 ├── internal/
+│   ├── backfill/                             (one-shot repair helpers)
 │   ├── source/
 │   │   ├── phxfire/                          (Phoenix Fire MapServer adapter)
 │   │   └── scannerwhisper/                   (future: scanner adapter)

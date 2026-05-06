@@ -54,6 +54,38 @@ var expectedFields = []string{
 	"GenLocInfo",
 }
 
+var natureDescOverrides = map[string]string{
+	"962":   "Vehicle Crash",
+	"962A":  "Vehicle Crash",
+	"962BC": "Crash Involving Bicycle",
+	"962P":  "Crash Involving Pedestrian",
+	"962X":  "Crash Requiring Extrication",
+	"962MC": "Crash Involving Motorcycle",
+}
+
+var unitTypePrefixes = []struct {
+	prefix   string
+	unitType string
+}{
+	{prefix: "NEDC", unitType: "Division Chief"},
+	{prefix: "NDC", unitType: "Division Chief"},
+	{prefix: "SDC", unitType: "Division Chief"},
+	{prefix: "WDC", unitType: "Division Chief"},
+	{prefix: "EDC", unitType: "Division Chief"},
+	{prefix: "BC", unitType: "Battalion Chief"},
+	{prefix: "BR", unitType: "Brush truck"},
+	{prefix: "HM", unitType: "Hazmat unit"},
+	{prefix: "HR", unitType: "Heavy Rescue"},
+	{prefix: "DR", unitType: "Drone"},
+	{prefix: "PI", unitType: "Public Information"},
+	{prefix: "LT", unitType: "Light truck"},
+	{prefix: "E", unitType: "Engine"},
+	{prefix: "L", unitType: "Ladder / Truck"},
+	{prefix: "M", unitType: "Medic / Ambulance"},
+	{prefix: "S", unitType: "Squad / Paramedic"},
+	{prefix: "R", unitType: "Rescue"},
+}
+
 // Client is the Source.
 type Client struct {
 	queryURL   string
@@ -164,6 +196,48 @@ type rawResponse struct {
 	} `json:"features"`
 }
 
+type CodeInfo struct {
+	Code     string `json:"code"`
+	Label    string `json:"label"`
+	Category string `json:"category"`
+}
+
+var codeDictionary = []CodeInfo{
+	{Code: "962", Label: "Vehicle Crash", Category: "traffic"},
+	{Code: "962A", Label: "Vehicle Crash", Category: "traffic"},
+	{Code: "962BC", Label: "Crash Involving Bicycle", Category: "traffic"},
+	{Code: "962MC", Label: "Crash Involving Motorcycle", Category: "traffic"},
+	{Code: "962P", Label: "Crash Involving Pedestrian", Category: "traffic"},
+	{Code: "962X", Label: "Crash Requiring Extrication", Category: "traffic"},
+	{Code: "BRST", Label: "Brush Fire", Category: "fire"},
+	{Code: "CKFOUT", Label: "Check Fire", Category: "fire"},
+	{Code: "CRASH", Label: "Aircraft Down", Category: "rescue"},
+	{Code: "DEBRIS", Label: "Debris Fire", Category: "fire"},
+	{Code: "DUMP", Label: "Dumpster Fire", Category: "fire"},
+	{Code: "FIELD", Label: "Field Fire", Category: "fire"},
+	{Code: "FLOOD", Label: "Check Flooding", Category: "rescue"},
+	{Code: "GAS", Label: "Gas Leak", Category: "hazmat"},
+	{Code: "GAS2-1", Label: "Gas Leak", Category: "hazmat"},
+	{Code: "GRASS", Label: "Grass Fire", Category: "fire"},
+	{Code: "HAZ3-1", Label: "Hazardous Situation", Category: "hazmat"},
+	{Code: "HOUSE", Label: "House Fire", Category: "fire"},
+	{Code: "LOCK", Label: "Lock Out", Category: "rescue"},
+	{Code: "MTNRES", Label: "Mountain Rescue", Category: "rescue"},
+	{Code: "POLE", Label: "Pole Fire", Category: "fire"},
+	{Code: "SNAKE", Label: "Snake Removal", Category: "rescue"},
+	{Code: "STR", Label: "Structure Fire", Category: "fire"},
+	{Code: "TREE", Label: "Tree Fire", Category: "fire"},
+	{Code: "UNKF", Label: "Unknown Fire", Category: "other"},
+	{Code: "VEH", Label: "Vehicle Fire", Category: "fire"},
+	{Code: "WF", Label: "Working Structure Fire", Category: "fire"},
+}
+
+func CodeDictionary() []CodeInfo {
+	out := make([]CodeInfo, len(codeDictionary))
+	copy(out, codeDictionary)
+	return out
+}
+
 // parseFeatures decodes ESRI JSON and normalizes each feature into model.Incident.
 // Returns an error on JSON parse failure; per-feature errors are skipped with
 // the rest of the batch returned.
@@ -194,11 +268,14 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 
 		featureBytes, _ := json.Marshal(f) // best effort; safe to ignore err
 
+		natureCode := strings.TrimSpace(f.Attributes.Nature)
+		natureDesc := NatureDescriptionFor(natureCode, f.Attributes.NatureDesc)
+
 		out = append(out, model.Incident{
 			Source:       SourceName,
 			IncidentID:   strings.TrimSpace(f.Attributes.Incident),
-			NatureCode:   strings.TrimSpace(f.Attributes.Nature),
-			NatureDesc:   strings.TrimSpace(f.Attributes.NatureDesc),
+			NatureCode:   natureCode,
+			NatureDesc:   natureDesc,
 			Units:        parseUnits(f.Attributes.Units),
 			Channel:      strings.TrimSpace(f.Attributes.Channel),
 			SymbolCode:   strings.TrimSpace(f.Attributes.SymbolCode),
@@ -212,37 +289,126 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 	return out, nil
 }
 
-// parseUnits decodes the HTML-entity-encoded comma-separated Units string.
-//
-// Sample input:  "E2203:&#160;On&#160;Scene, L24:&#160;Dispatched"
-// After decode:  "E2203: On Scene, L24: Dispatched"
-//
-// Format is best-effort: dispatcher entries are not always uniform. We split
-// on commas, then split each entry on the first colon. Whitespace is collapsed.
+// ParseUnits decodes Phoenix's HTML-entity-encoded Units string.
+func ParseUnits(raw string) []model.Unit {
+	return parseUnits(raw)
+}
+
+// parseUnits decodes the HTML-entity-encoded space-delimited Units string.
+// Phoenix emits "<unit>: <status>" pairs separated by regular spaces after
+// HTML entity decoding. Status values can contain spaces, so token boundaries
+// are detected by the next token ending in ":".
 func parseUnits(raw string) []model.Unit {
-	if raw == "" {
-		return nil
-	}
 	decoded := html.UnescapeString(raw)
+	decoded = strings.ReplaceAll(decoded, ",", " ")
+	tokens := strings.Fields(decoded)
+	if len(tokens) == 0 {
+		return []model.Unit{}
+	}
+
 	out := []model.Unit{}
-	for _, chunk := range strings.Split(decoded, ",") {
-		chunk = collapseWhitespace(strings.TrimSpace(chunk))
-		if chunk == "" {
+	var unit string
+	var statusParts []string
+	flush := func() {
+		unit = strings.TrimSpace(unit)
+		if unit == "" {
+			return
+		}
+		status := collapseWhitespace(strings.Join(statusParts, " "))
+		out = append(out, model.Unit{Unit: unit, Status: status, UnitType: UnitTypeForName(unit)})
+	}
+
+	for _, token := range tokens {
+		token = strings.TrimSpace(token)
+		if token == "" {
 			continue
 		}
-		var unit, status string
-		if idx := strings.Index(chunk, ":"); idx >= 0 {
-			unit = strings.TrimSpace(chunk[:idx])
-			status = strings.TrimSpace(chunk[idx+1:])
-		} else {
-			unit = chunk
+		if strings.HasSuffix(token, ":") {
+			flush()
+			unit = strings.TrimSuffix(token, ":")
+			statusParts = statusParts[:0]
+			continue
 		}
 		if unit == "" {
+			unit = token
 			continue
 		}
-		out = append(out, model.Unit{Unit: unit, Status: status})
+		statusParts = append(statusParts, token)
 	}
+	flush()
 	return out
+}
+
+func NatureDescriptionFor(code, desc string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	desc = strings.TrimSpace(desc)
+	override, ok := natureDescOverrides[code]
+	if !ok {
+		return desc
+	}
+	upperDesc := strings.ToUpper(desc)
+	family := numericPrefix(code)
+	if desc == "" || upperDesc == code || strings.HasPrefix(upperDesc, code) || (family != "" && strings.HasPrefix(upperDesc, family+" ")) {
+		return override
+	}
+	if desc == "" {
+		if label, ok := labelForCode(code); ok {
+			return label
+		}
+	}
+	return desc
+}
+
+func numericPrefix(s string) string {
+	for i, r := range s {
+		if r < '0' || r > '9' {
+			return s[:i]
+		}
+	}
+	return s
+}
+
+func UnitTypeForName(unit string) string {
+	unit = strings.ToUpper(strings.TrimSpace(unit))
+	for _, item := range unitTypePrefixes {
+		if strings.HasPrefix(unit, item.prefix) {
+			return item.unitType
+		}
+	}
+	return "other"
+}
+
+func LabelForCode(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if label, ok := labelForCode(code); ok {
+		return label
+	}
+	return code
+}
+
+func labelForCode(code string) (string, bool) {
+	for _, item := range codeDictionary {
+		if item.Code == code {
+			return item.Label, true
+		}
+	}
+	return "", false
+}
+
+func SeverityForCode(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	switch code {
+	case "STR", "HOUSE", "WF", "CRASH", "MTNRES":
+		return "high"
+	case "962X", "GRASS", "BRST", "VEH", "DEBRIS", "FLOOD", "TREE":
+		return "medium"
+	case "962", "962A", "LOCK", "SNAKE", "CKFOUT":
+		return "low"
+	}
+	if strings.HasPrefix(code, "HAZ") || strings.HasPrefix(code, "GAS") {
+		return "high"
+	}
+	return "unknown"
 }
 
 func collapseWhitespace(s string) string {

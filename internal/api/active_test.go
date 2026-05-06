@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abusedmindset/phoenix-feed/internal/model"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
@@ -17,6 +18,8 @@ type fakeStore struct {
 	activeFilter store.ActiveIncidentFilter
 	activeResult store.ActiveIncidentsResult
 	activeErr    error
+	statsResult  store.PublicStats
+	statsErr     error
 
 	detailSource     string
 	detailIncidentID string
@@ -34,6 +37,10 @@ type fakeStore struct {
 func (f *fakeStore) ListActiveIncidents(_ context.Context, filter store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error) {
 	f.activeFilter = filter
 	return f.activeResult, f.activeErr
+}
+
+func (f *fakeStore) PublicStats(_ context.Context) (store.PublicStats, error) {
+	return f.statsResult, f.statsErr
 }
 
 func (f *fakeStore) Ping(_ context.Context) error {
@@ -99,6 +106,85 @@ func TestActiveIncidentsEmptyResponseIncludesMeta(t *testing.T) {
 	}
 	if len(body.Incidents) != 0 {
 		t.Fatalf("incidents length = %d, want 0", len(body.Incidents))
+	}
+}
+
+func TestActiveIncidentsEmptyUnitsSerializesAsArray(t *testing.T) {
+	incidentDate := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
+	st := &fakeStore{
+		activeResult: store.ActiveIncidentsResult{
+			Incidents: []store.ActiveIncident{{
+				Source:       "phoenix-fire-mapserver",
+				IncidentID:   "F26200326",
+				NatureCode:   "STR",
+				NatureDesc:   "STRUCTURE FIRE",
+				Units:        []model.Unit{},
+				Lon:          -112.074,
+				Lat:          33.448,
+				IncidentDate: incidentDate,
+				ReceivedAt:   incidentDate,
+				LastSeenAt:   incidentDate,
+			}},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	incidents := body["incidents"].([]any)
+	first := incidents[0].(map[string]any)
+	units, ok := first["units"].([]any)
+	if !ok {
+		t.Fatalf("units = %#v, want empty JSON array", first["units"])
+	}
+	if len(units) != 0 {
+		t.Fatalf("units length = %d, want 0", len(units))
+	}
+}
+
+func TestActiveIncidentsAddsSeverity(t *testing.T) {
+	incidentDate := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
+	st := &fakeStore{
+		activeResult: store.ActiveIncidentsResult{
+			Incidents: []store.ActiveIncident{{
+				Source:       "phoenix-fire-mapserver",
+				IncidentID:   "F26200331",
+				NatureCode:   "962X",
+				NatureDesc:   "Crash Requiring Extrication",
+				Units:        []model.Unit{},
+				Lon:          -112.074,
+				Lat:          33.448,
+				IncidentDate: incidentDate,
+				ReceivedAt:   incidentDate,
+				LastSeenAt:   incidentDate,
+			}},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	first := body["incidents"].([]any)[0].(map[string]any)
+	if got := first["severity"]; got != "medium" {
+		t.Fatalf("severity = %v, want medium", got)
 	}
 }
 

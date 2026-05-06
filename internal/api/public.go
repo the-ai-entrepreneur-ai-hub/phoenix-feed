@@ -1,0 +1,101 @@
+package api
+
+import (
+	"log/slog"
+	"net/http"
+
+	"github.com/abusedmindset/phoenix-feed/internal/auth"
+	"github.com/abusedmindset/phoenix-feed/internal/source/phxfire"
+)
+
+func rootHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"name":    "cactus-watch-feed",
+			"version": "v1",
+			"docs":    "https://feed.cactuswatch.com/v1/openapi.json",
+			"health":  "https://feed.cactuswatch.com/v1/health",
+		})
+	}
+}
+
+func statsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats, err := st.PublicStats(r.Context())
+		if err != nil {
+			log.Error("public stats", "err", err)
+			writeError(w, http.StatusInternalServerError, "query public stats")
+			return
+		}
+		identity := auth.IdentityFromContext(r.Context())
+		stats.Tier = string(identity.Tier)
+		if stats.Tier == "" {
+			stats.Tier = string(auth.TierFree)
+		}
+		writeJSON(w, http.StatusOK, stats)
+	}
+}
+
+func codesHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"version": phxfire.ParserVersion,
+			"codes":   phxfire.CodeDictionary(),
+		})
+	}
+}
+
+func openAPIHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, openAPIDocument())
+	}
+}
+
+func openAPIDocument() map[string]any {
+	return map[string]any{
+		"openapi": "3.0.3",
+		"info": map[string]any{
+			"title":   "Cactus Watch Feed API",
+			"version": "v1",
+		},
+		"paths": map[string]any{
+			"/": map[string]any{
+				"get": map[string]any{"summary": "API identifier"},
+			},
+			"/v1/incidents/active": map[string]any{
+				"get": map[string]any{
+					"summary": "List active incidents",
+					"parameters": []map[string]any{
+						{"name": "bbox", "in": "query", "schema": map[string]string{"type": "string"}},
+						{"name": "lat", "in": "query", "schema": map[string]string{"type": "number"}},
+						{"name": "lon", "in": "query", "schema": map[string]string{"type": "number"}},
+						{"name": "radius_meters", "in": "query", "schema": map[string]string{"type": "number"}},
+						{"name": "since", "in": "query", "schema": map[string]string{"type": "string", "format": "date-time"}},
+						{"name": "until", "in": "query", "schema": map[string]string{"type": "string", "format": "date-time"}},
+					},
+				},
+			},
+			"/v1/incidents/refresh": map[string]any{
+				"post": map[string]any{"summary": "Manual active incident refresh read"},
+			},
+			"/v1/incidents/{source}/{incident_id}": map[string]any{
+				"get": map[string]any{"summary": "Get incident detail, unit history, and events"},
+			},
+			"/v1/incidents/history": map[string]any{
+				"get": map[string]any{"summary": "Paid history placeholder"},
+			},
+			"/v1/stats": map[string]any{
+				"get": map[string]any{"summary": "Public live feed statistics"},
+			},
+			"/v1/codes": map[string]any{
+				"get": map[string]any{"summary": "Phoenix incident code dictionary"},
+			},
+			"/v1/openapi.json": map[string]any{
+				"get": map[string]any{"summary": "OpenAPI document"},
+			},
+			"/v1/health": map[string]any{
+				"get": map[string]any{"summary": "Service health"},
+			},
+		},
+	}
+}

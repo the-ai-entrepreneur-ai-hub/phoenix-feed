@@ -79,13 +79,30 @@ The browser client calls `http://localhost:8080/v1/incidents/active`, so keep th
 
 ## API routes
 
+- `GET /` — JSON service identifier with docs and health links.
 - `GET /v1/incidents/active` — active cached incidents with optional `bbox`, `lat`/`lon`/`radius_meters`, `since`, and `until` filters.
 - `POST /v1/incidents/refresh` — manual cache refresh read, throttled to 120 seconds per client.
 - `GET /v1/incidents/{source}/{incident_id}` — one incident with unit and event history.
 - `GET /v1/incidents/history` — paid placeholder; returns `402` in v0.3.
+- `GET /v1/stats` — public live counts for active incidents, today, last 24 hours, active units, and data age.
+- `GET /v1/codes` — code dictionary with labels and one of `traffic`, `fire`, `medical`, `hazmat`, `rescue`, or `other`.
+- `GET /v1/openapi.json` — concise OpenAPI 3.0 document for the public v1 surface.
 - `GET /v1/health` — DB reachability, per-source freshness, canary status, and aggregate `ok`/`degraded`/`down`.
 
 `/v1/incidents/active` and `/v1/incidents/refresh` include Cactus Alert metadata in `meta`: disclaimer, attribution, `refresh_min_seconds`, and `tier`.
+
+Incidents include additive `severity` and unit `unit_type` fields. Existing `Unit` and `Status` unit fields are unchanged for v1 compatibility; empty unit snapshots serialize as `[]`.
+
+Severity is derived from `nature_code`:
+
+| Severity | Codes |
+| --- | --- |
+| `high` | `STR`, `HOUSE`, `WF`, `CRASH`, `MTNRES`, `HAZ*`, `GAS*` |
+| `medium` | `962X`, `GRASS`, `BRST`, `VEH`, `DEBRIS`, `FLOOD`, `TREE` |
+| `low` | `962`, `962A`, `LOCK`, `SNAKE`, `CKFOUT` |
+| `unknown` | Any unmapped code |
+
+The code dictionary at `/v1/codes` is the client-facing label source for filtering and color-coding. Traffic crash labels are normalized server-side: `962`/`962A` become `Vehicle Crash`, `962BC` becomes `Crash Involving Bicycle`, `962P` becomes `Crash Involving Pedestrian`, `962X` becomes `Crash Requiring Extrication`, and `962MC` becomes `Crash Involving Motorcycle`.
 
 ## API keys
 

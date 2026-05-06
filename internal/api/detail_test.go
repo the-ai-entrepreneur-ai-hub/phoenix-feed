@@ -68,6 +68,9 @@ func TestIncidentDetailFound(t *testing.T) {
 	if body.Incident["incident_id"] != "F26198635" {
 		t.Fatalf("incident_id = %v", body.Incident["incident_id"])
 	}
+	if body.Incident["severity"] != "high" {
+		t.Fatalf("severity = %v, want high", body.Incident["severity"])
+	}
 	if len(body.UnitHistory) != 1 {
 		t.Fatalf("unit_history length = %d", len(body.UnitHistory))
 	}

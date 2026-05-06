@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/abusedmindset/phoenix-feed/internal/model"
+	"github.com/abusedmindset/phoenix-feed/internal/source/phxfire"
 )
 
 type Store struct {
@@ -56,7 +57,8 @@ type ActiveIncident struct {
 	IncidentID           string       `json:"incident_id"`
 	NatureCode           string       `json:"nature_code,omitempty"`
 	NatureDesc           string       `json:"nature_desc,omitempty"`
-	Units                []model.Unit `json:"units,omitempty"`
+	Severity             string       `json:"severity,omitempty"`
+	Units                []model.Unit `json:"units"`
 	Channel              string       `json:"channel,omitempty"`
 	SymbolCode           string       `json:"symbol_code,omitempty"`
 	LocationText         string       `json:"location_text,omitempty"`
@@ -79,7 +81,8 @@ type IncidentDetail struct {
 	IncidentID   string       `json:"incident_id"`
 	NatureCode   string       `json:"nature_code,omitempty"`
 	NatureDesc   string       `json:"nature_desc,omitempty"`
-	Units        []model.Unit `json:"units,omitempty"`
+	Severity     string       `json:"severity,omitempty"`
+	Units        []model.Unit `json:"units"`
 	Channel      string       `json:"channel,omitempty"`
 	SymbolCode   string       `json:"symbol_code,omitempty"`
 	LocationText string       `json:"location_text,omitempty"`
@@ -114,6 +117,17 @@ type IncidentDetailResult struct {
 	Incident    *IncidentDetail   `json:"incident"`
 	UnitHistory []UnitObservation `json:"unit_history"`
 	Events      []IncidentEvent   `json:"events"`
+}
+
+type PublicStats struct {
+	CurrentActiveCount  int            `json:"current_active_count"`
+	TodayTotalIncidents int            `json:"today_total_incidents"`
+	TodayByCategory     map[string]int `json:"today_by_category"`
+	Last24hTotal        int            `json:"last_24h_total"`
+	ActiveUnitsNow      int            `json:"active_units_now"`
+	DataAgeSeconds      int            `json:"data_age_seconds"`
+	Tier                string         `json:"tier"`
+	SourceUpdatedAt     time.Time      `json:"-"`
 }
 
 type CanaryHealth struct {
@@ -231,7 +245,7 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 
 	incidents := []ActiveIncident{}
 	for rows.Next() {
-		var inc ActiveIncident
+		inc := ActiveIncident{Units: []model.Unit{}}
 		var unitsBytes []byte
 		if err := rows.Scan(
 			&inc.Source, &inc.IncidentID, &inc.NatureCode, &inc.NatureDesc, &unitsBytes, &inc.Channel,
@@ -243,6 +257,9 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 		if len(unitsBytes) > 0 {
 			if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
 				return ActiveIncidentsResult{}, fmt.Errorf("decode units for %s/%s: %w", inc.Source, inc.IncidentID, err)
+			}
+			if inc.Units == nil {
+				inc.Units = []model.Unit{}
 			}
 		}
 		incidents = append(incidents, inc)
@@ -316,7 +333,7 @@ func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*In
 		FROM incidents
 		WHERE source = $1 AND incident_id = $2`
 
-	var inc IncidentDetail
+	inc := IncidentDetail{Units: []model.Unit{}}
 	var natureCode, natureDesc, channel, symbolCode, locationText sql.NullString
 	var lon, lat sql.NullFloat64
 	var clearedAt sql.NullTime
@@ -346,6 +363,9 @@ func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*In
 	if len(unitsBytes) > 0 {
 		if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
 			return nil, fmt.Errorf("decode incident units %s/%s: %w", source, incidentID, err)
+		}
+		if inc.Units == nil {
+			inc.Units = []model.Unit{}
 		}
 	}
 	return &inc, nil
@@ -479,6 +499,56 @@ func (s *Store) LatestSuccessAt(ctx context.Context, source string) (time.Time, 
 	return t, err
 }
 
+func (s *Store) PublicStats(ctx context.Context) (PublicStats, error) {
+	const dayStart = `date_trunc('day', NOW() AT TIME ZONE 'America/Phoenix') AT TIME ZONE 'America/Phoenix'`
+	stats := PublicStats{TodayByCategory: map[string]int{}}
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM active_incidents WHERE geom IS NOT NULL)::int,
+			(SELECT COUNT(*) FROM incidents WHERE incident_date >= `+dayStart+`)::int,
+			(SELECT COUNT(*) FROM incidents WHERE incident_date >= NOW() - INTERVAL '24 hours')::int,
+			(SELECT COALESCE(SUM(jsonb_array_length(COALESCE(units, '[]'::jsonb))), 0)::int FROM active_incidents WHERE geom IS NOT NULL),
+			COALESCE(EXTRACT(EPOCH FROM (NOW() - (
+				SELECT started_at FROM source_polls
+				WHERE success = TRUE
+				ORDER BY started_at DESC
+				LIMIT 1
+			)))::int, 0)`,
+	).Scan(&stats.CurrentActiveCount, &stats.TodayTotalIncidents, &stats.Last24hTotal, &stats.ActiveUnitsNow, &stats.DataAgeSeconds)
+	if err != nil {
+		return PublicStats{}, fmt.Errorf("public stats totals: %w", err)
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT COALESCE(NULLIF(nature_code, ''), 'UNKNOWN') AS nature_code, COUNT(*)::int
+		FROM incidents
+		WHERE incident_date >= `+dayStart+`
+		GROUP BY 1
+		ORDER BY 1`)
+	if err != nil {
+		return PublicStats{}, fmt.Errorf("public stats category counts: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var code string
+		var count int
+		if err := rows.Scan(&code, &count); err != nil {
+			return PublicStats{}, err
+		}
+		label := phxfire.LabelForCode(code)
+		if label == "" {
+			label = "Unknown"
+		}
+		stats.TodayByCategory[label] += count
+	}
+	if err := rows.Err(); err != nil {
+		return PublicStats{}, err
+	}
+
+	return stats, nil
+}
+
 // SourceHealth returns freshness and latest canary status for configured sources.
 func (s *Store) SourceHealth(ctx context.Context, sources []string) ([]SourceHealth, error) {
 	out := make([]SourceHealth, 0, len(sources))
@@ -579,6 +649,33 @@ func (s *Store) RecordCanary(ctx context.Context, result ContractCanaryResult) e
 		return fmt.Errorf("record canary %s: %w", result.Source, err)
 	}
 	return nil
+}
+
+func (s *Store) RecentCanaryFeatureCounts(ctx context.Context, source string, limit int) ([]int, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT COALESCE(feature_count, 0)
+		FROM contract_canary
+		WHERE source = $1
+		ORDER BY checked_at DESC
+		LIMIT $2`, source, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("recent canary feature counts %s: %w", source, err)
+	}
+	defer rows.Close()
+
+	counts := []int{}
+	for rows.Next() {
+		var count int
+		if err := rows.Scan(&count); err != nil {
+			return nil, err
+		}
+		counts = append(counts, count)
+	}
+	return counts, rows.Err()
 }
 
 // Ping is a thin wrapper for the API health endpoint.

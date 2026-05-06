@@ -8,11 +8,11 @@ import "time"
 // Source-specific quirks (HTML entities, weird whitespace, native projections)
 // are resolved before this struct is constructed.
 type Incident struct {
-	Source       string    // e.g. "phoenix-fire-mapserver"
-	IncidentID   string    // upstream stable ID, e.g. "F26198635"
-	NatureCode   string    // short code, e.g. "WF"
-	NatureDesc   string    // human-readable, trimmed
-	Units        []Unit    // current snapshot of units + status
+	Source       string // e.g. "phoenix-fire-mapserver"
+	IncidentID   string // upstream stable ID, e.g. "F26198635"
+	NatureCode   string // short code, e.g. "WF"
+	NatureDesc   string // human-readable, trimmed
+	Units        []Unit // current snapshot of units + status
 	Channel      string
 	SymbolCode   string
 	LocationText string
@@ -24,8 +24,9 @@ type Incident struct {
 
 // Unit represents one apparatus and its observed status on this incident.
 type Unit struct {
-	Unit   string // e.g. "E2203"
-	Status string // e.g. "On Scene", "Dispatched", "Available"
+	Unit     string // e.g. "E2203"
+	Status   string // e.g. "On Scene", "Dispatched", "Available"
+	UnitType string `json:"unit_type,omitempty"` // e.g. "Engine", "Medic / Ambulance"
 }
 
 // PollResult is what a Source returns from one fetch attempt.

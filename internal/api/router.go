@@ -19,6 +19,7 @@ type Store interface {
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
 	LookupAPIKey(context.Context, string) (store.APIKey, error)
 	Ping(context.Context) error
+	PublicStats(context.Context) (store.PublicStats, error)
 	SourceHealth(context.Context, []string) ([]store.SourceHealth, error)
 }
 
@@ -54,9 +55,13 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	}
 	cfg.RateLimiter = limiter
 
+	r.Get("/", rootHandler())
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/history", historyPlaceholderHandler(cfg))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))
+	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/stats", statsHandler(st, cfg, log))
+	r.Get("/v1/codes", codesHandler())
+	r.Get("/v1/openapi.json", openAPIHandler())
 	r.Get("/v1/health", healthHandler(st, cfg, log))
 }

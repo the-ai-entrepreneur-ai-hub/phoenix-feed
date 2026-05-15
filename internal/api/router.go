@@ -56,7 +56,7 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	cfg.RateLimiter = limiter
 
 	r.Get("/", rootHandler())
-	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/history", historyPlaceholderHandler(cfg))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))

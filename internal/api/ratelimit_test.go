@@ -12,7 +12,7 @@ import (
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
-func TestActiveIncidentsAnonymousSecondRequestIsRateLimited(t *testing.T) {
+func TestActiveIncidentsAllowsRepeatedCachedReads(t *testing.T) {
 	st := &fakeStore{}
 	limiter := ratelimit.New(ratelimit.Config{
 		FreeEvery:   10 * time.Minute,
@@ -29,16 +29,17 @@ func TestActiveIncidentsAnonymousSecondRequestIsRateLimited(t *testing.T) {
 		t.Fatalf("first status = %d, want 200", first.Code)
 	}
 
-	second := httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
-	req.Header.Set("X-Client-ID", "device-rate-test")
-	router.ServeHTTP(second, req)
-
-	if second.Code != http.StatusTooManyRequests {
-		t.Fatalf("second status = %d, want 429", second.Code)
-	}
-	if got := second.Header().Get("Retry-After"); got == "" {
-		t.Fatal("Retry-After header missing")
+	for i := 0; i < 3; i++ {
+		rr := httptest.NewRecorder()
+		req = httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+		req.Header.Set("X-Client-ID", "device-rate-test")
+		router.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("repeat %d status = %d, want 200: %s", i+1, rr.Code, rr.Body.String())
+		}
+		if got := rr.Header().Get("Retry-After"); got != "" {
+			t.Fatalf("repeat %d Retry-After = %q, want empty", i+1, got)
+		}
 	}
 }
 

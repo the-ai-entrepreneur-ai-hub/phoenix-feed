@@ -35,7 +35,7 @@ The runtime is five small Go binaries plus Postgres:
 
 - **`cmd/ingester`** — polls one upstream source on a 60s + jitter cadence, writes to Postgres, manages the incident lifecycle. One ingester process per source. Source identity is config not code.
 - **`cmd/canary`** — hourly contract check against each upstream. Verifies field names, output spatial reference, geometry plausibility, feature count sanity. Writes to `contract_canary` and pages on drift.
-- **`cmd/api`** — read only REST/JSON. Serves cached data, applies rate limits, enforces auth for paid endpoints. Includes staleness fields in every response.
+- **`cmd/api`** — read only REST/JSON. Serves cached data, applies rate limits where needed, enforces auth for paid endpoints. Includes staleness fields in every response.
 - **`cmd/janitor`** — periodic retention job. Drops `raw` JSONB after 30 days, archives cleared incidents older than 30 days to the cold partition.
 - **`cmd/keygen`** — manual owner-operated key generator. Prints a new API key once and stores only its SHA-256 hash.
 
@@ -135,9 +135,9 @@ Endpoints (v1):
 
 Incident responses keep the existing v1 fields and add `severity` derived from `nature_code`. Unit snapshots keep existing `Unit` and `Status` keys and add `unit_type`. Bare Phoenix crash codes are normalized when Phoenix sends only the numeric/truncated label: `962` and `962A` become `Vehicle Crash`; `962BC`, `962P`, `962X`, and `962MC` become cleaner crash subtype labels. Ambiguous Phoenix descriptions such as `GAS2-1` and `CKFOUT` remain source-provided when Phoenix sends a meaningful description.
 
-Auth: `X-API-Key` is optional. Missing keys are treated as anonymous free clients and rate limited by `X-Client-ID`, `X-Forwarded-For`, or IP fallback. Present keys are SHA-256 hashed, looked up in `api_keys`, and resolved to `free` or `paid`; unknown or revoked keys return `401`. Paid keys are issued manually with `cmd/keygen` until billing exists. No client should ever pass through to Phoenix.
+Auth: `X-API-Key` is optional. Missing keys are treated as anonymous free clients identified by `X-Client-ID`, `X-Forwarded-For`, or IP fallback. Present keys are SHA-256 hashed, looked up in `api_keys`, and resolved to `free` or `paid`; unknown or revoked keys return `401`. Paid keys are issued manually with `cmd/keygen` until billing exists. No client should ever pass through to Phoenix.
 
-Rate limiting is enforced in `cmd/api` with in-memory token buckets in v0.3. Free active/detail reads are limited to one request per 10 minutes per resolved client; paid active/detail reads are limited to one request per 50 seconds per API key; manual refresh is limited to one request per 120 seconds. This assumes a single API process on the v0.3 droplet. When traffic requires multiple API replicas, replace the in-memory buckets with Redis-backed counters keyed by the same identity strings and keep the handler contract unchanged.
+Rate limiting is enforced in `cmd/api` with in-memory token buckets in v0.3. Cached active-feed reads are not app-throttled because the server owns the Phoenix polling cadence and mobile clients must be able to reopen reliably. Detail reads use the incident-read limiter; manual refresh is limited to one request per 120 seconds. This assumes a single API process on the v0.3 droplet. When traffic requires multiple API replicas, replace the in-memory buckets with Redis-backed counters keyed by the same identity strings and keep the handler contract unchanged.
 
 ## 9. Compliance
 

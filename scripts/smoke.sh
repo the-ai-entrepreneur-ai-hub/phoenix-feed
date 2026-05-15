@@ -62,7 +62,7 @@ wait_for_api() {
   exit 1
 }
 
-expect_active_meta_and_rate_limit() {
+expect_active_meta_and_repeat_reads() {
   local first_status second_status body
   body="$(mktemp)"
   first_status="$(curl -sS -o "$body" -w "%{http_code}" -H "X-Client-ID: $CLIENT_ID" "$API_URL/v1/incidents/active")"
@@ -77,8 +77,8 @@ expect_active_meta_and_rate_limit() {
   grep -q '"tier":"free"' "$body"
 
   second_status="$(curl -sS -o /tmp/phx-active-second.json -w "%{http_code}" -H "X-Client-ID: $CLIENT_ID" "$API_URL/v1/incidents/active")"
-  if [[ "$second_status" != "429" ]]; then
-    echo "second active request returned $second_status, want 429" >&2
+  if [[ "$second_status" != "200" ]]; then
+    echo "second active request returned $second_status, want 200" >&2
     cat /tmp/phx-active-second.json >&2 || true
     exit 1
   fi
@@ -88,7 +88,7 @@ require_cmd curl
 
 if [[ "$SMOKE_EXTERNAL" == "1" ]]; then
   wait_for_api
-  expect_active_meta_and_rate_limit
+  expect_active_meta_and_repeat_reads
   echo "smoke ok"
   exit 0
 fi
@@ -109,6 +109,6 @@ INGESTER_PID=""
 DATABASE_URL="$DB_DSN" HTTP_ADDR=:8080 go run ./cmd/api >/tmp/phx-api.log 2>&1 &
 API_PID="$!"
 wait_for_api
-expect_active_meta_and_rate_limit
+expect_active_meta_and_repeat_reads
 
 echo "smoke ok"

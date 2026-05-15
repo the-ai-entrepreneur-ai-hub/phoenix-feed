@@ -79,7 +79,7 @@ WORK TO PERFORM (in order)
 
 3. Update the active-feed call. Whatever method currently fetches and parses Phoenix Maps' response should now hit GET /v1/incidents/active, parse into IncidentFeed, and return.
 
-4. Wire pull-to-refresh. The user gesture must call POST /v1/incidents/refresh. On 200, replace list contents from the response. On 429, surface a non-blocking inline message: "Refreshing too fast — try again in a couple minutes." On 5xx, "Couldn't reach the feed. Pull down to retry." Do not crash, do not show stack traces.
+4. Wire pull-to-refresh. The user gesture must call POST /v1/incidents/refresh. On 200, replace list contents from the response. On 429 or 5xx, keep the current list visible and avoid crash dialogs, stack traces, or persistent feed-delay banners.
 
 5. Render the meta block.
    - Persistent banner at the top of the feed: meta.disclaimer ("Not for emergency use; call 911"). Render the server's value, do not hard-code it — copy can change without an app update.

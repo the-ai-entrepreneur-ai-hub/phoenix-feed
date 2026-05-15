@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	cactusDisclaimer  = "Not for emergency use; call 911"
-	cactusAttribution = "Data via City of Phoenix Fire Department"
+	cactusDisclaimer       = "Not for emergency use; call 911"
+	cactusAttribution      = "Data via City of Phoenix Fire Department"
+	activeRefreshMinSecond = 60
 )
 
 func activeIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
@@ -61,7 +62,11 @@ func applyCactusMeta(meta *store.StalenessMeta, identity auth.Identity, limiter 
 	}
 	meta.Disclaimer = cactusDisclaimer
 	meta.Attribution = cactusAttribution
-	meta.RefreshMinSeconds = int(math.Ceil(limiter.RefreshEvery(identity, scope).Seconds()))
+	if scope == ratelimit.ScopeIncidentRead {
+		meta.RefreshMinSeconds = activeRefreshMinSecond
+	} else {
+		meta.RefreshMinSeconds = int(math.Ceil(limiter.RefreshEvery(identity, scope).Seconds()))
+	}
 	meta.Tier = string(identity.Tier)
 	if meta.Tier == "" {
 		meta.Tier = string(auth.TierFree)

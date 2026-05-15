@@ -33,7 +33,7 @@ Response top-level shape (your Dart models must match this exactly):
     "parser_version": "phx-fire-2026-05",
     "disclaimer": "Not for emergency use; call 911",
     "attribution": "Data via City of Phoenix Fire Department",
-    "refresh_min_seconds": 600,
+    "refresh_min_seconds": 60,
     "tier": "free"
   },
   "incidents": [
@@ -84,16 +84,16 @@ WORK TO PERFORM (in order)
 5. Render the meta block.
    - Persistent banner at the top of the feed: meta.disclaimer ("Not for emergency use; call 911"). Render the server's value, do not hard-code it — copy can change without an app update.
    - Footer beneath the list: small text rendering meta.attribution.
-   - If meta.refresh_min_seconds differs from 600, use the server's value as the auto-refresh interval (foreground only).
+   - Active-feed auto-refresh should use the backend source cadence, 60 seconds in the foreground only.
 
 6. Free tier UI per the v2.0 decision brief. v1 is intentionally spartan:
    - Single muted color, no theme picker
    - Disclaimer banner (above list, never dismissible)
    - Scrollable list of incidents from the API
-   - Each row: nature_desc (large), location_text (medium), incident_date formatted as relative time ("3 minutes ago"), units rendered as comma-joined string ("E23 (Responding), L7 (Dispatched)")
+   - Each free row: nature_desc (large), location_text (medium), incident_date formatted as 24-hour dispatch time ("23:50"). Do not render units on free rows.
    - Footer: meta.attribution
    - Pull-to-refresh gesture
-   - Auto-refresh every 600 seconds in foreground only — no background fetch
+   - Auto-refresh every 60 seconds in foreground only — no background fetch
    - Use the new severity field for visual emphasis: high = subtle red dot, medium = yellow dot, low = no dot. Do not introduce a paid-tier color theme.
    - Hide / gate behind Tier.paid flag (default off): any existing map view, color theme picker, fire-station overlay, custom alert UI. Do not delete this code unless required by the permission strip; just hide it.
 

@@ -9,7 +9,7 @@ v0.3 — DigitalOcean deployable and ready for Cactus Alert freemium.
 - Poll Phoenix Fire's public ArcGIS endpoint with `cmd/ingester`.
 - Persist active incidents, unit history, lifecycle events, source polls, canary results, and raw-retention state in Postgres/PostGIS.
 - Serve cached REST/JSON from `cmd/api`; users never call Phoenix directly.
-- Enforce free/paid/manual refresh cadence server-side.
+- Enforce detail/manual refresh cadence server-side while keeping cached active-feed reads repeatable.
 - Issue manual free/paid API keys with `cmd/keygen`.
 - Deploy with Docker Compose, Caddy, and `cloud-init.yml` on DigitalOcean.
 

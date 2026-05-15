@@ -23,7 +23,7 @@ func TestActiveMetaForFreeClient(t *testing.T) {
 	if meta["attribution"] != "Data via City of Phoenix Fire Department" {
 		t.Fatalf("attribution = %v", meta["attribution"])
 	}
-	if meta["refresh_min_seconds"] != float64(600) {
+	if meta["refresh_min_seconds"] != float64(60) {
 		t.Fatalf("refresh_min_seconds = %v", meta["refresh_min_seconds"])
 	}
 	if meta["tier"] != "free" {
@@ -35,7 +35,7 @@ func TestActiveMetaForPaidClient(t *testing.T) {
 	body := requestIncidentPayload(t, "paid-meta-key", http.MethodGet, "/v1/incidents/active")
 
 	meta := body["meta"].(map[string]any)
-	if meta["refresh_min_seconds"] != float64(50) {
+	if meta["refresh_min_seconds"] != float64(60) {
 		t.Fatalf("refresh_min_seconds = %v", meta["refresh_min_seconds"])
 	}
 	if meta["tier"] != "paid" {

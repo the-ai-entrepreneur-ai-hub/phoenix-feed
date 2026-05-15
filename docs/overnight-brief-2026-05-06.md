@@ -94,7 +94,7 @@ You have one PR to review and merge: `feat/data-quality-overhaul`. Everything el
 - Privacy policy: plain English, App Store ready, no trackers, IP-based rate limiting only (auto-rotated 7 days).
 - Terms of service: "not for emergency use" first, $10 liability cap when no subscription paid, AZ governing law.
 - About page: what the project is, attribution to City of Phoenix, why $4.99 paid tier is the funding model.
-- FAQ: 12 questions including the cost-discipline answer for "why is the free tier rate-limited".
+- FAQ: 12 questions including cost-discipline positioning for the free tier.
 - Landing page: live-stats widget, footer links to all four new pages.
 
 ### Infrastructure (me, on `main`)

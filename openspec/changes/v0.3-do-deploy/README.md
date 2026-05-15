@@ -5,7 +5,7 @@ Make phoenix-feed deployable on DigitalOcean and ready to back Cactus Alert's fr
 This change adds:
 
 - API key auth and manual paid key generation.
-- Server-enforced free/paid/manual refresh cadence.
+- Server-enforced detail/manual refresh cadence, with repeatable cached active-feed reads.
 - Cactus-facing response metadata.
 - Dev/prod Docker Compose and per-binary Dockerfiles.
 - DigitalOcean cloud-init and deployment runbook.

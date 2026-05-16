@@ -78,6 +78,9 @@ func openAPIDocument() map[string]any {
 			"/v1/incidents/refresh": map[string]any{
 				"post": map[string]any{"summary": "Manual active incident refresh read"},
 			},
+			"/v1/fire-stations": map[string]any{
+				"get": map[string]any{"summary": "List Phoenix Fire station overlay features"},
+			},
 			"/v1/incidents/{source}/{incident_id}": map[string]any{
 				"get": map[string]any{"summary": "Get incident detail, unit history, and events"},
 			},

@@ -15,6 +15,7 @@ type Config struct {
 	PollInterval     time.Duration // ingester base cadence
 	PollJitter       time.Duration // ± jitter applied each cycle
 	HTTPAddr         string        // api bind address
+	FireStationsURL  string        // optional upstream override for station overlay proxy
 	ClearAfterMisses int           // consecutive successful polls absent before clearing
 	RawRetention     time.Duration // janitor: drop raw JSONB after this age
 	LogLevel         string        // "debug" | "info" | "warn" | "error"
@@ -26,6 +27,7 @@ func Load() (Config, error) {
 	c := Config{
 		DatabaseURL:      env("DATABASE_URL", "postgres://localhost:5432/phoenix_feed?sslmode=disable"),
 		HTTPAddr:         env("HTTP_ADDR", ":8080"),
+		FireStationsURL:  env("FIRE_STATIONS_URL", ""),
 		LogLevel:         env("LOG_LEVEL", "info"),
 		ClearAfterMisses: envInt("CLEAR_AFTER_MISSES", 5),
 		PollInterval:     envDuration("POLL_INTERVAL", 60*time.Second),

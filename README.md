@@ -82,6 +82,7 @@ The browser client calls `http://localhost:8080/v1/incidents/active`, so keep th
 - `GET /` — JSON service identifier with docs and health links.
 - `GET /v1/incidents/active` — active cached incidents with optional `bbox`, `lat`/`lon`/`radius_meters`, `since`, and `until` filters.
 - `POST /v1/incidents/refresh` — manual cache refresh read, throttled to 120 seconds per client.
+- `GET /v1/fire-stations` — Phoenix Fire station overlay FeatureServer JSON proxied through Cactus Watch.
 - `GET /v1/incidents/{source}/{incident_id}` — one incident with unit and event history.
 - `GET /v1/incidents/history` — paid placeholder; returns `402` in v0.3.
 - `GET /v1/stats` — public live counts for active incidents, today, last 24 hours, active units, and data age.
@@ -124,6 +125,7 @@ curl -H "X-API-Key: <api-key>" http://localhost:8080/v1/incidents/active
 
 - `DATABASE_URL` — Postgres DSN.
 - `HTTP_ADDR` — API bind address, default `:8080`.
+- `FIRE_STATIONS_URL` — optional Phoenix station FeatureServer upstream override for `/v1/fire-stations`.
 - `POLL_INTERVAL` — ingester cadence, default `60s`.
 - `POLL_JITTER` — cadence jitter, default `10s`.
 - `CLEAR_AFTER_MISSES` — successful absent polls before clearing, default `5`.

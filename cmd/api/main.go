@@ -44,6 +44,7 @@ func main() {
 	api.RegisterRoutes(r, st, api.Config{
 		DefaultParserVersion: phxfire.ParserVersion,
 		AllowedOrigins:       cfg.AllowedOrigins,
+		FireStationsURL:      cfg.FireStationsURL,
 		PaidTierEnabled:      cfg.PaidTierEnabled,
 		Sources:              []string{phxfire.SourceName},
 		StaleAfter:           10 * time.Minute,

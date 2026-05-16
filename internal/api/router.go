@@ -25,13 +25,15 @@ type Store interface {
 
 // Config carries API-specific runtime behavior.
 type Config struct {
-	DefaultParserVersion string
-	AllowedOrigins       []string
-	PaidTierEnabled      bool
-	Sources              []string
-	StaleAfter           time.Duration
-	RateLimiter          *ratelimit.Limiter
-	Now                  func() time.Time
+	DefaultParserVersion   string
+	AllowedOrigins         []string
+	FireStationsURL        string
+	FireStationsHTTPClient *http.Client
+	PaidTierEnabled        bool
+	Sources                []string
+	StaleAfter             time.Duration
+	RateLimiter            *ratelimit.Limiter
+	Now                    func() time.Time
 }
 
 // Router returns a standalone v1 API router. cmd/api wraps this with process
@@ -57,6 +59,7 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 
 	r.Get("/", rootHandler())
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
+	r.Get("/v1/fire-stations", fireStationsHandler(cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/history", historyPlaceholderHandler(cfg))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeIncidentRead)).Get("/v1/incidents/{source}/{incident_id}", incidentDetailHandler(st, cfg, log))

@@ -10,8 +10,13 @@
     <meta property="og:description" content="Live Phoenix metro fire and EMS incidents on your phone.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://cactuswatch.com">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8C%B5%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
 
+    <link rel="preload" as="image" href="/img/hero-phoenix-map.webp" type="image/webp" fetchpriority="high">
+    <link rel="preload" as="style" href="/css/app.css">
     <link rel="stylesheet" href="/css/app.css">
     <style>
         body {
@@ -28,6 +33,10 @@
         .reveal.visible {
             opacity: 1;
             transform: translateY(0) scale(1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1; transform: none; transition: none; }
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
 
         .hero-composition {
@@ -192,15 +201,24 @@
 
         <div class="hero-composition reveal" style="transition-delay: 200ms;">
             <div class="device left">
-                <img src="/img/hero-home-feed.png" alt="Cactus Watch home feed showing a live crash incident with responding units" />
+                <picture>
+                    <source srcset="/img/hero-home-feed.webp" type="image/webp">
+                    <img src="/img/hero-home-feed.png" width="720" height="720" loading="lazy" decoding="async" alt="Cactus Watch home feed showing a live crash incident with responding units" />
+                </picture>
             </div>
 
             <div class="device center">
-                <img src="/img/hero-phoenix-map.png" alt="Cactus Watch interactive map centered on the Phoenix metro area" />
+                <picture>
+                    <source srcset="/img/hero-phoenix-map.webp" type="image/webp">
+                    <img src="/img/hero-phoenix-map.png" width="900" height="900" fetchpriority="high" decoding="async" alt="Cactus Watch interactive map centered on the Phoenix metro area" />
+                </picture>
             </div>
 
             <div class="device right">
-                <img src="/img/hero-incident-detail.png" alt="Cactus Watch incident detail sheet showing channel, time, location and the full responding units roster" />
+                <picture>
+                    <source srcset="/img/hero-incident-detail.webp" type="image/webp">
+                    <img src="/img/hero-incident-detail.png" width="820" height="820" loading="lazy" decoding="async" alt="Cactus Watch incident detail sheet showing channel, time, location and the full responding units roster" />
+                </picture>
             </div>
         </div>
     </section>

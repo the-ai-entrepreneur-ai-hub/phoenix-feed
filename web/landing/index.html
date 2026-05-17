@@ -1,217 +1,410 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth bg-black text-white">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Cactus Watch — live Phoenix metro fire and EMS incident feed for civilians. Coming soon to iOS.">
-  <meta name="robots" content="index, follow">
-  <meta property="og:title" content="Cactus Watch">
-  <meta property="og:description" content="Live Phoenix metro fire and EMS incidents on your phone.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://cactuswatch.com">
-  <title>Cactus Watch — Live Phoenix Fire & EMS Incidents</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🌵%3C/text%3E%3C/svg%3E">
-  <style>
-    :root {
-      --bg: #faf8f3;
-      --ink: #1a1a1a;
-      --muted: #5a5a5a;
-      --accent: #2d5016;
-      --rule: #d4cfc0;
-      --warn-bg: #fff8e6;
-      --warn-rule: #c9a649;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 17px;
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrap {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 4rem 1.5rem 3rem;
-    }
-    header {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 3rem;
-    }
-    header .logo { font-size: 2rem; line-height: 1; }
-    header .name {
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      font-size: 1.15rem;
-    }
-    h1 {
-      font-size: 2.25rem;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-      margin: 0 0 1rem;
-      color: var(--ink);
-    }
-    .tagline {
-      font-size: 1.2rem;
-      color: var(--muted);
-      margin: 0 0 2.5rem;
-      line-height: 1.4;
-    }
-    p { margin: 0 0 1.2rem; }
-    .cta {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      text-decoration: none;
-      padding: 0.8rem 1.4rem;
-      border-radius: 6px;
-      font-weight: 600;
-      margin-top: 0.5rem;
-      transition: transform 0.1s ease;
-    }
-    .cta:hover { transform: translateY(-1px); }
-    .cta.secondary {
-      background: transparent;
-      color: var(--accent);
-      border: 1.5px solid var(--accent);
-      margin-left: 0.5rem;
-    }
-    section { margin: 3rem 0; }
-    section h2 {
-      font-size: 1.25rem;
-      letter-spacing: -0.01em;
-      margin: 0 0 0.8rem;
-    }
-    .features {
-      list-style: none;
-      padding: 0;
-      margin: 1rem 0;
-    }
-    .features li {
-      padding: 0.6rem 0;
-      border-bottom: 1px solid var(--rule);
-      display: flex;
-      gap: 0.6rem;
-      align-items: flex-start;
-    }
-    .features li:last-child { border-bottom: 0; }
-    .features li::before {
-      content: "→";
-      color: var(--accent);
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-    .disclaimer {
-      background: var(--warn-bg);
-      border-left: 4px solid var(--warn-rule);
-      padding: 1rem 1.2rem;
-      margin: 2.5rem 0;
-      font-size: 0.95rem;
-      line-height: 1.5;
-      border-radius: 4px;
-    }
-    .disclaimer strong { color: #7a5800; }
-    footer {
-      margin-top: 4rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--rule);
-      font-size: 0.88rem;
-      color: var(--muted);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem 1.2rem;
-      justify-content: space-between;
-    }
-    footer .links a {
-      color: var(--muted);
-      text-decoration: none;
-      margin-right: 1rem;
-    }
-    footer .links a:hover { color: var(--ink); text-decoration: underline; }
-    @media (max-width: 480px) {
-      .wrap { padding: 2.5rem 1.25rem 2rem; }
-      h1 { font-size: 1.85rem; }
-      .tagline { font-size: 1.05rem; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cactus Watch - Phoenix Incident Map</title>
+    <meta name="description" content="Real-time fire and rescue incidents across the Phoenix metro.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Cactus Watch">
+    <meta property="og:description" content="Live Phoenix metro fire and EMS incidents on your phone.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cactuswatch.com">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8C%B5%3C/text%3E%3C/svg%3E">
+
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background-color: #000000;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px) scale(0.98);
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .hero-composition {
+            position: relative;
+            width: 100%;
+            height: 900px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 4rem;
+            perspective: 1000px;
+        }
+
+        .device {
+            position: absolute;
+            background: #000;
+            border-radius: 48px;
+            border: 1px solid #333336;
+            box-shadow: 0 0 0 4px #111111, 0 40px 80px rgba(0,0,0,0.8);
+            overflow: hidden;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .device img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .device.center {
+            width: 380px;
+            height: 822px;
+            z-index: 20;
+            transform: translateZ(50px);
+        }
+
+        .device.left {
+            width: 280px;
+            height: 606px;
+            left: 50%;
+            transform: translateX(-140%) translateY(-10%) translateZ(-50px) rotate(-4deg);
+            z-index: 10;
+            opacity: 0.8;
+            filter: blur(1px);
+        }
+
+        .device.right {
+            width: 320px;
+            height: 692px;
+            left: 50%;
+            transform: translateX(30%) translateY(15%) translateZ(100px) rotate(2deg);
+            z-index: 30;
+            box-shadow: 0 0 0 4px #1C1C1E, 0 60px 100px rgba(0,0,0,0.9);
+        }
+
+        @media (max-width: 1024px) {
+            .hero-composition { height: 700px; }
+            .device.center { width: 320px; height: 692px; }
+            .device.left { width: 240px; height: 520px; transform: translateX(-120%) translateY(-5%) translateZ(-50px) rotate(-4deg); }
+            .device.right { width: 260px; height: 563px; transform: translateX(20%) translateY(10%) translateZ(80px) rotate(2deg); }
+        }
+
+        @media (max-width: 768px) {
+            .hero-composition { height: 600px; overflow: hidden; }
+            .device.center { width: 300px; height: 650px; z-index: 30; transform: translateZ(0); }
+            .device.left { display: none; }
+            .device.right { width: 220px; height: 476px; transform: translateX(30%) translateY(20%) translateZ(-20px) rotate(6deg); z-index: 10; opacity: 0.6; filter: blur(2px); }
+        }
+
+        .btn-pro {
+            background-color: #FFFFFF;
+            color: #000000;
+            font-weight: 600;
+            border-radius: 999px;
+            transition: all 0.2s ease;
+        }
+        .btn-pro:hover {
+            transform: scale(1.02);
+            background-color: #F2F2F7;
+        }
+
+        .btn-outline-pro {
+            background-color: transparent;
+            color: #FFFFFF;
+            border: 1px solid #FFFFFF;
+            font-weight: 600;
+            border-radius: 999px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-pro:hover {
+            background-color: #FFFFFF;
+            color: #000000;
+        }
+
+        .nav-glass {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .text-hero {
+            font-size: clamp(3rem, 8vw, 6rem);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+        .text-subhero {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            line-height: 1.4;
+            letter-spacing: -0.01em;
+        }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <header>
-      <span class="logo" aria-hidden="true">🌵</span>
-      <span class="name">Cactus Watch</span>
+<body class="bg-black text-white relative antialiased selection:bg-white selection:text-black">
+
+    <header class="fixed top-0 left-0 right-0 z-50 h-[56px] nav-glass flex items-center justify-center px-6">
+        <div class="max-w-7xl w-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                    <path d="M12 22V7"/>
+                    <path d="M12 7c0-2.5-2-3-2-3s-2 .5-2 3v5"/>
+                    <path d="M12 7c0-2.5 2-3 2-3s2 .5 2 3v3"/>
+                </svg>
+                <span class="font-semibold text-sm tracking-tight text-white">Cactus Watch</span>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-8 text-[13px] font-medium text-grey-300">
+                <a href="#features" class="hover:text-white transition-colors">Features</a>
+                <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+                <a href="#about" class="hover:text-white transition-colors">About</a>
+            </nav>
+
+            <a href="#download" class="hidden md:inline-flex items-center justify-center h-7 px-4 rounded-full bg-white text-black font-semibold text-xs hover:bg-grey-200 transition-colors">
+                Download
+            </a>
+        </div>
     </header>
 
-    <h1>Live Phoenix metro fire and EMS incidents, on your phone.</h1>
-    <p class="tagline">Know what's happening in your neighborhood the moment dispatch sends a unit. No newsroom delay, no police-scanner clutter — just clear, current incidents pulled directly from the City of Phoenix Fire Department's public feed.</p>
+    <section class="relative pt-32 md:pt-48 pb-16 overflow-hidden">
+        <div class="max-w-6xl mx-auto px-6 text-center relative z-40 reveal">
+            <h1 class="text-hero font-bold mb-6 mx-auto">
+                Pro. Active.
+            </h1>
+            <h2 class="text-[32px] md:text-[56px] font-semibold leading-tight tracking-tight mb-6 text-grey-100">
+                Phoenix incidents, the moment they happen.
+            </h2>
+            <p class="text-subhero text-grey-500 max-w-3xl mx-auto mb-12 font-medium">
+                Live dispatch data. Interactive mapping. Instant awareness. <br class="hidden md:block">
+                Built for the people who serve the metro.
+            </p>
 
-    <p id="live-stats" style="font-size:0.95rem; color:var(--muted); margin:0 0 2rem; opacity:0; transition:opacity 0.4s ease;"></p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+                <a href="#download" class="btn-pro w-full sm:w-auto inline-flex items-center justify-center h-14 px-8 text-[17px]">
+                    Download the App
+                </a>
+                <a href="#features" class="btn-outline-pro w-full sm:w-auto inline-flex items-center justify-center h-14 px-8 text-[17px]">
+                    See the features
+                </a>
+            </div>
+        </div>
 
-    <p>
-      <a class="cta" href="mailto:tradebridge2026@gmail.com?subject=Cactus%20Watch%20beta%20interest">Join the beta</a>
-      <a class="cta secondary" href="#about">Learn more</a>
-    </p>
+        <div class="hero-composition reveal" style="transition-delay: 200ms;">
+            <div class="device left">
+                <img src="/img/hero-home-feed.png" alt="Cactus Watch home feed showing a live crash incident with responding units" />
+            </div>
 
-    <section id="about">
-      <h2>What you'll see</h2>
-      <ul class="features">
-        <li>Active incidents within Phoenix city limits, refreshed every minute</li>
-        <li>Incident type, location, dispatched units, and time on scene</li>
-        <li>Map and list views, filter by distance from where you are</li>
-        <li>Optional alerts when something happens within a radius you set <em>(paid tier)</em></li>
-      </ul>
+            <div class="device center">
+                <img src="/img/hero-phoenix-map.png" alt="Cactus Watch interactive map centered on the Phoenix metro area" />
+            </div>
+
+            <div class="device right">
+                <img src="/img/hero-incident-detail.png" alt="Cactus Watch incident detail sheet showing channel, time, location and the full responding units roster" />
+            </div>
+        </div>
     </section>
 
-    <section>
-      <h2>Why a paid tier?</h2>
-      <p>The free tier shows the same data anyone can see on the City's public dashboard, just packaged for your phone. The paid tier (coming after launch) adds custom alerts, faster refresh, and incident history — and it's how we cover server costs without ads or selling your data.</p>
+    <section class="py-32 bg-black">
+        <div class="max-w-4xl mx-auto px-6 text-center reveal">
+            <h2 class="text-[40px] md:text-[64px] font-bold leading-[1.1] tracking-tight mb-8">
+                The old way is noise.<br>
+                <span class="text-grey-500">This is signal.</span>
+            </h2>
+            <p class="text-xl text-grey-400 font-medium max-w-2xl mx-auto leading-relaxed">
+                Scanners are clunky. Twitter is rumors. The local news is hours behind. Cactus Watch puts the live dispatch board directly in your pocket. Pure data, zero friction.
+            </p>
+        </div>
     </section>
 
-    <div class="disclaimer">
-      <strong>Not for emergency use.</strong> Cactus Watch is a situational-awareness tool only. If you have a real emergency, call 911. Data is sourced from the City of Phoenix Fire Department's public feed and may be delayed, incomplete, or temporarily unavailable. We are not affiliated with the City of Phoenix.
-    </div>
+    <section id="features" class="py-32 bg-[#0A0A0A] border-y border-grey-800">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="mb-24 text-center reveal">
+                <h2 class="text-[40px] md:text-[64px] font-bold tracking-tight mb-6">Uncompromising detail.</h2>
+                <p class="text-xl text-grey-500 font-medium">Everything you need to know. Nothing you don't.</p>
+            </div>
 
-    <footer>
-      <div class="copyright">© 2026 Cactus Watch</div>
-      <div class="links">
-        <a href="/about">About</a>
-        <a href="/faq">FAQ</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:tradebridge2026@gmail.com">Contact</a>
-      </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                <div class="p-10 rounded-[32px] bg-[#111111] border border-grey-800 reveal group">
+                    <svg class="w-8 h-8 text-white mb-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                    <h3 class="text-3xl font-semibold mb-4 tracking-tight">Live incident feed.</h3>
+                    <p class="text-lg text-grey-400 leading-relaxed">Refreshes every 60 seconds. New incidents land instantly, giving you the clearest picture of current activity.</p>
+                </div>
+
+                <div class="p-10 rounded-[32px] bg-[#111111] border border-grey-800 reveal group">
+                    <svg class="w-8 h-8 text-white mb-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <h3 class="text-3xl font-semibold mb-4 tracking-tight">Interactive map.</h3>
+                    <p class="text-lg text-grey-400 leading-relaxed">Pins for every active incident. Tap any pin for responding units, radio channel, dispatch time, and exact location.</p>
+                </div>
+
+                <div class="p-10 rounded-[32px] bg-[#111111] border border-grey-800 reveal group">
+                    <svg class="w-8 h-8 text-white mb-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <h3 class="text-3xl font-semibold mb-4 tracking-tight">Push alerts.</h3>
+                    <p class="text-lg text-grey-400 leading-relaxed">Available with Plus. Pick the stations you care about and receive a quiet, instant notification the moment they roll.</p>
+                </div>
+
+                <div class="p-10 rounded-[32px] bg-[#111111] border border-grey-800 reveal group">
+                    <svg class="w-8 h-8 text-white mb-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                    </svg>
+                    <h3 class="text-3xl font-semibold mb-4 tracking-tight">Phoenix focused.</h3>
+                    <p class="text-lg text-grey-400 leading-relaxed">We cover six metro agencies with absolute precision. No noise from other cities. Just the valley.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="py-32 bg-black">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="mb-20 text-center reveal">
+                <h2 class="text-[40px] md:text-[64px] font-bold tracking-tight mb-4">Choose your tier.</h2>
+                <p class="text-xl text-grey-500 font-medium">Powerful for free. Essential with Plus.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-12 rounded-[40px] bg-[#0A0A0A] border border-grey-800 reveal flex flex-col">
+                    <h3 class="text-3xl font-semibold tracking-tight mb-2">Free</h3>
+                    <p class="text-grey-500 font-medium mb-8">Watch the metro.</p>
+                    <div class="text-[64px] font-bold tracking-tighter mb-12">$0</div>
+
+                    <ul class="space-y-6 flex-1 mb-12">
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-300">
+                            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            Live incident feed
+                        </li>
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-300">
+                            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            Interactive map
+                        </li>
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-300">
+                            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            Dispatch detail
+                        </li>
+                    </ul>
+                    <a href="#download" class="btn-outline-pro w-full h-14 flex items-center justify-center text-[17px]">Get Started</a>
+                </div>
+
+                <div class="p-12 rounded-[40px] bg-white text-black reveal flex flex-col transform md:-translate-y-4 shadow-[0_20px_60px_rgba(255,255,255,0.1)]">
+                    <h3 class="text-3xl font-semibold tracking-tight mb-2">Plus</h3>
+                    <p class="text-grey-600 font-medium mb-8">Get pinged when your stations roll.</p>
+                    <div class="flex items-baseline gap-2 mb-2">
+                        <div class="text-[64px] font-bold tracking-tighter">$6.99</div>
+                        <div class="text-xl font-medium text-grey-600">/mo</div>
+                    </div>
+                    <p class="text-sm font-medium text-grey-500 mb-10">$76.99/year. Yearly saves you about one month a year.</p>
+
+                    <ul class="space-y-6 flex-1 mb-12">
+                        <li class="flex items-center gap-4 text-lg font-bold">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Everything in Free
+                        </li>
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-800">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Push alerts for picked stations
+                        </li>
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-800">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Fire station overlay on the map
+                        </li>
+                        <li class="flex items-center gap-4 text-lg font-medium text-grey-800">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Zero delay on new incidents
+                        </li>
+                    </ul>
+                    <a href="#download" class="w-full h-14 bg-black text-white font-semibold rounded-full flex items-center justify-center text-[17px] hover:scale-[1.02] transition-transform">Upgrade in App</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="py-32 bg-[#0A0A0A] border-t border-grey-800">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-[40px] md:text-[64px] font-bold tracking-tight text-center mb-24 reveal">By the numbers.</h2>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-12 text-center reveal">
+                <div>
+                    <div class="text-[56px] md:text-[80px] font-bold tracking-tighter mb-2">60s</div>
+                    <div class="text-sm uppercase tracking-[0.2em] font-semibold text-grey-500">feed refresh</div>
+                </div>
+                <div>
+                    <div class="text-[56px] md:text-[80px] font-bold tracking-tighter mb-2">6</div>
+                    <div class="text-sm uppercase tracking-[0.2em] font-semibold text-grey-500">metro agencies</div>
+                </div>
+                <div>
+                    <div class="text-[56px] md:text-[80px] font-bold tracking-tighter mb-2">24/7</div>
+                    <div class="text-sm uppercase tracking-[0.2em] font-semibold text-grey-500">monitored</div>
+                </div>
+                <div>
+                    <div class="text-[56px] md:text-[80px] font-bold tracking-tighter mb-2">100%</div>
+                    <div class="text-sm uppercase tracking-[0.2em] font-semibold text-grey-500">public data</div>
+                </div>
+            </div>
+
+            <div class="mt-32 max-w-3xl mx-auto text-center reveal">
+                <p class="text-[24px] md:text-[32px] font-medium leading-tight text-grey-300 mb-8">
+                    "I built Cactus Watch because I wanted to know what was happening in my own city without sorting through rumors. Built for the people who serve Phoenix, and those who wait at home."
+                </p>
+                <p class="text-lg font-bold uppercase tracking-widest text-grey-500">&mdash; Dan, Founder</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 bg-black border-t border-grey-800">
+        <div class="max-w-3xl mx-auto px-6 text-center reveal">
+            <h3 class="text-2xl font-bold tracking-tight mb-4">A tool for awareness. Not response.</h3>
+            <p class="text-grey-500 font-medium leading-relaxed">
+                Cactus Watch is strictly independent. Not affiliated with any government agency. Data may be delayed or incomplete. If you are having an emergency, call 911 immediately.
+            </p>
+        </div>
+    </section>
+
+    <section id="download" class="py-40 bg-white text-black text-center reveal">
+        <div class="max-w-4xl mx-auto px-6">
+            <h2 class="text-[56px] md:text-[80px] font-bold tracking-tighter leading-none mb-8">
+                Stop refreshing.<br>Start knowing.
+            </h2>
+            <p class="text-2xl text-grey-600 font-medium mb-12 max-w-2xl mx-auto">
+                Free to install. Available for iOS and Android.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#" class="w-full sm:w-auto inline-flex items-center justify-center h-16 px-10 rounded-full bg-black text-white font-semibold text-[19px] hover:scale-105 transition-transform">
+                    Download on the App Store
+                </a>
+                <a href="#" class="w-full sm:w-auto inline-flex items-center justify-center h-16 px-10 rounded-full bg-black text-white font-semibold text-[19px] hover:scale-105 transition-transform">
+                    Get it on Google Play
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-12 bg-[#0A0A0A] text-grey-500">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2 font-bold text-white tracking-tight">
+                Cactus Watch
+            </div>
+            <div class="flex gap-8 text-sm font-medium">
+                <a href="/privacy/" class="hover:text-white transition-colors">Privacy</a>
+                <a href="/terms/" class="hover:text-white transition-colors">Terms</a>
+                <a href="mailto:support@cactuswatch.com" class="hover:text-white transition-colors">Support</a>
+            </div>
+            <div class="text-sm font-medium">
+                Built in Phoenix. &copy; 2026.
+            </div>
+        </div>
     </footer>
 
-    <script>
-      // Live stats widget — fetches /v1/stats from the API. Degrades silently
-      // on 404 (endpoint not deployed yet) or any other error so the page
-      // always renders cleanly.
-      (function () {
-        const slot = document.getElementById('live-stats');
-        if (!slot) return;
-        const api = 'https://feed.cactuswatch.com/v1/stats';
-        fetch(api, { cache: 'no-store' })
-          .then(r => r.ok ? r.json() : null)
-          .then(d => {
-            if (!d || typeof d.current_active_count !== 'number') return;
-            const n = d.current_active_count;
-            const today = d.today_total_incidents;
-            const age = d.data_age_seconds;
-            const txt = (today != null)
-              ? `Currently tracking ${n} active incident${n === 1 ? '' : 's'} in Phoenix · ${today} dispatched today`
-              : `Currently tracking ${n} active incident${n === 1 ? '' : 's'} in Phoenix`;
-            slot.textContent = txt;
-            slot.style.opacity = '1';
-            if (age != null && age < 120) slot.title = `Data refreshed ${age}s ago`;
-          })
-          .catch(() => { /* silent — widget hides if endpoint unavailable */ });
-      })();
-    </script>
-  </div>
+    <div class="md:hidden fixed bottom-6 left-6 right-6 z-50 reveal" style="transition-delay: 500ms;">
+        <a href="#download" class="w-full h-14 bg-white text-black font-semibold rounded-full flex items-center justify-center text-[17px] shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+            Download Now
+        </a>
+    </div>
+
+    <script src="/js/app.js" defer></script>
 </body>
 </html>

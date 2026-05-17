@@ -1,76 +1,136 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-black text-white">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Frequently asked questions about Cactus Watch.">
-  <title>FAQ — Cactus Watch</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🌵%3C/text%3E%3C/svg%3E">
-  <style>
-    :root { --bg:#faf8f3; --ink:#1a1a1a; --muted:#5a5a5a; --accent:#2d5016; --rule:#d4cfc0; }
-    * { box-sizing: border-box; }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased; }
-    .wrap { max-width:680px; margin:0 auto; padding:3rem 1.5rem 4rem; }
-    nav { display:flex; gap:0.6rem; align-items:center; margin-bottom:2.5rem; }
-    nav a { color:var(--muted); text-decoration:none; font-size:0.9rem; }
-    nav a:hover { color:var(--ink); }
-    nav .sep { color:var(--rule); }
-    h1 { font-size:2rem; line-height:1.2; letter-spacing:-0.02em; margin:0 0 2rem; }
-    .q { margin: 1.8rem 0 0.4rem; font-weight: 600; font-size: 1.08rem; color: var(--ink); }
-    .a { margin: 0 0 1.6rem; color: var(--ink); }
-    a { color: var(--accent); }
-    code { background:#fff; padding:0.05rem 0.35rem; border:1px solid var(--rule); border-radius:3px; font-size:0.92rem; }
-    footer { margin-top:4rem; padding-top:1.5rem; border-top:1px solid var(--rule); font-size:0.88rem; color:var(--muted); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - Cactus Watch</title>
+    <meta name="description" content="Frequently asked questions about Cactus Watch.">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="preload" as="style" href="/css/app.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background-color: #000000;
+        }
+        .nav-glass {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <nav><a href="/">🌵 Cactus Watch</a><span class="sep">/</span><span>FAQ</span></nav>
+<body class="bg-black text-white antialiased">
 
-    <h1>Frequently asked questions</h1>
+    <header class="fixed top-0 left-0 right-0 z-50 h-[56px] nav-glass flex items-center justify-center px-6">
+        <div class="max-w-7xl w-full flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 no-underline">
+                <img src="/favicon.svg" alt="" width="24" height="24" class="block">
+                <span class="font-semibold text-sm tracking-tight text-white">Cactus Watch</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8 text-[13px] font-medium text-grey-300">
+                <a href="/#features" class="hover:text-white transition-colors">Features</a>
+                <a href="/#pricing" class="hover:text-white transition-colors">Pricing</a>
+                <a href="/#about" class="hover:text-white transition-colors">About</a>
+            </nav>
+            <a href="/#download" class="hidden md:inline-flex items-center justify-center h-7 px-4 rounded-full bg-white text-black font-semibold text-xs hover:bg-grey-200 transition-colors">Download</a>
+        </div>
+    </header>
 
-    <p class="q">Is this affiliated with the Phoenix Fire Department?</p>
-    <p class="a">No. We are an independent third party that uses Phoenix's publicly published incident feed under the City's Open Data Policy. We do not represent the City and we are not endorsed by them.</p>
+    <main class="max-w-3xl mx-auto px-6 pt-32 md:pt-40 pb-24">
+        <nav class="text-sm text-grey-500 mb-12">
+            <a href="/" class="hover:text-white transition-colors">Home</a>
+            <span class="mx-2 text-grey-700">/</span>
+            <span class="text-grey-300">FAQ</span>
+        </nav>
 
-    <p class="q">Can I rely on this for emergency response?</p>
-    <p class="a">No. Cactus Watch is for situational awareness only. If you have an emergency, call 911. Our data can be delayed, incomplete, or temporarily unavailable. Do not make safety-critical decisions based on what you see in the app.</p>
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-10">Frequently asked questions</h1>
 
-    <p class="q">How fresh is the data?</p>
-    <p class="a">We pull the City's feed every 60 seconds. The free tier of the app refreshes every 10 minutes plus a manual pull-to-refresh gesture. The paid tier (when it launches) refreshes every minute.</p>
+        <div class="space-y-10">
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Is this affiliated with the Phoenix Fire Department?</h2>
+                <p class="text-grey-300 leading-relaxed">No. We are an independent third party that uses Phoenix publicly published incident feed under the City Open Data Policy. We do not represent the City and we are not endorsed by them.</p>
+            </div>
 
-    <p class="q">Why is the free tier so spartan?</p>
-    <p class="a">Because we want it to actually be free, with no ads and no selling your data. A spartan free tier funded by a paid tier (when it launches) is the only honest way to do that. The free tier still gives you the real product: live incidents in your city. The paid tier adds polish and convenience.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Can I rely on this for emergency response?</h2>
+                <p class="text-grey-300 leading-relaxed">No. Cactus Watch is for situational awareness only. If you have an emergency, call 911. Our data can be delayed, incomplete, or temporarily unavailable. Do not make safety-critical decisions based on what you see in the app.</p>
+            </div>
 
-    <p class="q">Why does the free tier rate-limit me?</p>
-    <p class="a">Server costs scale with traffic. The free tier caps at one feed pull every ten minutes per device, plus a pull-to-refresh override capped at one extra fetch every two minutes. This keeps our DigitalOcean bill at $22/month even at thousands of free users. Without the cap, a few aggressive clients could break the budget for everyone.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">How fresh is the data?</h2>
+                <p class="text-grey-300 leading-relaxed">We pull the City feed every 60 seconds. The free tier of the app refreshes on the same cadence. Cactus Watch Plus subscribers see incidents the moment they hit our cache with zero artificial delay.</p>
+            </div>
 
-    <p class="q">What does "962" mean? Why do I see it sometimes?</p>
-    <p class="a">It's a Phoenix CAD code for vehicle crash. Phoenix's feed sends most codes with human-readable descriptions, but a few are sent as raw codes. We translate the most common ones (962 → Vehicle Crash, 962BC → Crash Involving Bicycle, etc.) so you don't have to memorize dispatch jargon. If you see a code we haven't translated yet, email us and we'll add it.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Why does Cactus Watch Plus exist?</h2>
+                <p class="text-grey-300 leading-relaxed">Because we want the free tier to actually be free with no ads and no data sale. A paid tier funded by users who need push alerts and station overlays is the only honest way to do that. The free tier still gives you the real product: live incidents in your city. Plus adds the alerts and overlays.</p>
+            </div>
 
-    <p class="q">Why don't I see police calls?</p>
-    <p class="a">Phoenix Police runs a separate dispatch system that is not publicly published in the same way. We are working on adding scanner-derived police call transcripts as a paid feature, but it is not currently available.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">What does 962 mean? Why do I see it sometimes?</h2>
+                <p class="text-grey-300 leading-relaxed">It is a Phoenix CAD code for vehicle crash. Phoenix feed sends most codes with human-readable descriptions, but a few are sent as raw codes. We translate the most common ones (<code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962</code> to Vehicle Crash, <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962BC</code> to Crash Involving Bicycle, etc.) so you do not have to memorize dispatch jargon. If you see a code we have not translated yet, email us and we will add it.</p>
+            </div>
 
-    <p class="q">Why don't I see calls in Mesa, Tempe, Glendale?</p>
-    <p class="a">Each city runs its own dispatch system. We launch with Phoenix because it's the largest population center and has the cleanest public feed. Mesa, Tempe, Glendale, Scottsdale, Tucson are next, in roughly that order, after we have paying subscribers to fund the work.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Why do not I see police calls?</h2>
+                <p class="text-grey-300 leading-relaxed">Phoenix Police runs a separate dispatch system that is not publicly published in the same way. We are exploring scanner-derived police call transcripts as a future paid feature, but it is not currently available.</p>
+            </div>
 
-    <p class="q">Does the app drain my battery?</p>
-    <p class="a">No. We do not run in the background. The app only refreshes while you have it open. No GPS polling, no location tracking, nothing happening when the screen is off.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Why do not I see calls in Mesa, Tempe, Glendale?</h2>
+                <p class="text-grey-300 leading-relaxed">Each city runs its own dispatch system. We launch with Phoenix because it is the largest population center and has the cleanest public feed. Mesa, Tempe, Glendale, Scottsdale, Tucson are next, in roughly that order, after we have paying subscribers to fund the work.</p>
+            </div>
 
-    <p class="q">Why doesn't the app ask for my location?</p>
-    <p class="a">Because v1 doesn't need it. We show all Phoenix incidents on one screen, and the list is short enough that you can scroll. When the paid tier adds a "incidents within X miles of me" filter, we'll ask for location at that moment, and you can opt out.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Does the app drain my battery?</h2>
+                <p class="text-grey-300 leading-relaxed">No. We do not run in the background. The app only refreshes while you have it open. No GPS polling, no location tracking, nothing happening when the screen is off.</p>
+            </div>
 
-    <p class="q">Where can I report a bug or request a feature?</p>
-    <p class="a">Email <a href="mailto:tradebridge2026@gmail.com">tradebridge2026@gmail.com</a>. We read every message.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Why does the app ask for my location?</h2>
+                <p class="text-grey-300 leading-relaxed">Only when you tap the locate-me button on the map to center it on you. Location is never tracked in the background and is never shared with any third party.</p>
+            </div>
 
-    <p class="q">How do I delete my data?</p>
-    <p class="a">There is nothing tied to you to delete. We do not have your name, email, location, or any account. Server logs that include your IP address are auto-rotated after 7 days. If you want to be sure, just stop using the app.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Where can I report a bug or request a feature?</h2>
+                <p class="text-grey-300 leading-relaxed">Email <a href="mailto:tradebridge2026@gmail.com" class="text-white underline underline-offset-2 hover:text-grey-300">tradebridge2026@gmail.com</a>. We read every message.</p>
+            </div>
 
-    <p class="q">Is Cactus Watch open source?</p>
-    <p class="a">The backend is currently closed-source while we stabilize the data pipeline. We may open-source the iOS app and parts of the backend after launch. The data we consume is already public; the value we add is the labels, caching, and packaging.</p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">How do I delete my data?</h2>
+                <p class="text-grey-300 leading-relaxed">There is nothing tied to you to delete. We do not have your name, email, location, or any account. Server logs that include your IP address are auto-rotated after 7 days. If you want to be sure, just stop using the app.</p>
+            </div>
 
-    <footer>
-      <p><a href="/">Back to home</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/about">About</a></p>
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Is Cactus Watch open source?</h2>
+                <p class="text-grey-300 leading-relaxed">The backend is currently closed source while we stabilize the data pipeline. We may open source the iOS app and parts of the backend after launch. The data we consume is already public; the value we add is the labels, caching, and packaging.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-12 bg-[#0A0A0A] text-grey-500 border-t border-grey-800">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2 font-bold text-white tracking-tight">
+                <img src="/favicon.svg" alt="" width="28" height="28" class="block">
+                <span>Cactus Watch</span>
+            </div>
+            <div class="flex gap-8 text-sm font-medium">
+                <a href="/privacy/" class="hover:text-white transition-colors">Privacy</a>
+                <a href="/terms/" class="hover:text-white transition-colors">Terms</a>
+                <a href="/about/" class="hover:text-white transition-colors">About</a>
+                <a href="/faq/" class="hover:text-white transition-colors">FAQ</a>
+                <a href="mailto:tradebridge2026@gmail.com" class="hover:text-white transition-colors">Support</a>
+            </div>
+            <div class="text-sm font-medium">Built in Phoenix. &copy; 2026.</div>
+        </div>
     </footer>
-  </div>
 </body>
 </html>

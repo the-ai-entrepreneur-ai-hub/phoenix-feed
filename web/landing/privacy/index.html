@@ -1,106 +1,134 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-black text-white">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Cactus Watch privacy policy. We collect almost nothing. Here's exactly what.">
-  <title>Privacy Policy — Cactus Watch</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🌵%3C/text%3E%3C/svg%3E">
-  <style>
-    :root {
-      --bg: #faf8f3;
-      --ink: #1a1a1a;
-      --muted: #5a5a5a;
-      --accent: #2d5016;
-      --rule: #d4cfc0;
-    }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0;
-      background: var(--bg); color: var(--ink);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 17px; line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrap { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
-    nav { display: flex; gap: 0.6rem; align-items: center; margin-bottom: 2.5rem; }
-    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
-    nav a:hover { color: var(--ink); }
-    nav .sep { color: var(--rule); }
-    h1 {
-      font-size: 2rem; line-height: 1.2; letter-spacing: -0.02em;
-      margin: 0 0 0.5rem;
-    }
-    .updated { color: var(--muted); font-size: 0.92rem; margin: 0 0 2rem; }
-    h2 {
-      font-size: 1.2rem; letter-spacing: -0.01em;
-      margin: 2.5rem 0 0.6rem; padding-bottom: 0.3rem;
-      border-bottom: 1px solid var(--rule);
-    }
-    p { margin: 0 0 1rem; }
-    .lead {
-      font-size: 1.1rem; color: var(--ink);
-      background: #fffbef; border-left: 3px solid var(--accent);
-      padding: 1rem 1.2rem; margin: 1rem 0 2rem; border-radius: 4px;
-    }
-    ul { padding-left: 1.4rem; margin: 0.5rem 0 1.2rem; }
-    ul li { margin-bottom: 0.4rem; }
-    table { border-collapse: collapse; width: 100%; margin: 0.8rem 0 1.5rem; font-size: 0.95rem; }
-    th, td { padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
-    th { font-weight: 600; background: #fff; }
-    code { background: #fff; padding: 0.05rem 0.35rem; border: 1px solid var(--rule); border-radius: 3px; font-size: 0.92rem; }
-    footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-size: 0.88rem; color: var(--muted); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Cactus Watch</title>
+    <meta name="description" content="Cactus Watch privacy policy. We collect almost nothing. Here is exactly what.">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="preload" as="style" href="/css/app.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background-color: #000000;
+        }
+        .nav-glass {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <nav><a href="/">🌵 Cactus Watch</a><span class="sep">/</span><span>Privacy</span></nav>
+<body class="bg-black text-white antialiased">
 
-    <h1>Privacy Policy</h1>
-    <p class="updated">Effective 5 May 2026 · plain-English version, no legalese substituted.</p>
+    <header class="fixed top-0 left-0 right-0 z-50 h-[56px] nav-glass flex items-center justify-center px-6">
+        <div class="max-w-7xl w-full flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 no-underline">
+                <img src="/favicon.svg" alt="" width="24" height="24" class="block">
+                <span class="font-semibold text-sm tracking-tight text-white">Cactus Watch</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8 text-[13px] font-medium text-grey-300">
+                <a href="/#features" class="hover:text-white transition-colors">Features</a>
+                <a href="/#pricing" class="hover:text-white transition-colors">Pricing</a>
+                <a href="/#about" class="hover:text-white transition-colors">About</a>
+            </nav>
+            <a href="/#download" class="hidden md:inline-flex items-center justify-center h-7 px-4 rounded-full bg-white text-black font-semibold text-xs hover:bg-grey-200 transition-colors">Download</a>
+        </div>
+    </header>
 
-    <p class="lead"><strong>Short version:</strong> we don't make accounts, we don't track you, we don't ask for your location, we don't sell anything. The app shows you incidents Phoenix Fire publishes publicly. That's it.</p>
+    <main class="max-w-3xl mx-auto px-6 pt-32 md:pt-40 pb-24">
+        <nav class="text-sm text-grey-500 mb-12">
+            <a href="/" class="hover:text-white transition-colors">Home</a>
+            <span class="mx-2 text-grey-700">/</span>
+            <span class="text-grey-300">Privacy</span>
+        </nav>
 
-    <h2>What we collect</h2>
-    <table>
-      <tr><th>Data</th><th>Why</th><th>Stored?</th></tr>
-      <tr><td>Your IP address</td><td>To rate-limit abusive clients (anonymous users get one feed pull per ten minutes)</td><td>In server logs for 7 days, then auto-rotated</td></tr>
-      <tr><td>The fact that someone hit our API</td><td>Aggregate counters for capacity planning</td><td>Yes, but not tied to identity</td></tr>
-    </table>
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-3">Privacy Policy</h1>
+        <p class="text-sm text-grey-500 mb-10">Effective 5 May 2026. Plain English, no legalese.</p>
 
-    <p>That's the entire list. We do not collect:</p>
-    <ul>
-      <li>Your name, email, phone number, or address</li>
-      <li>Your physical location or GPS coordinates</li>
-      <li>Your contacts, photos, or any device data beyond what every web request transmits</li>
-      <li>Cookies, advertising identifiers, or fingerprinting data</li>
-      <li>Anything from third-party trackers (we use none)</li>
-    </ul>
+        <div class="text-lg leading-relaxed border-l-2 border-white pl-5 text-grey-200 mb-12">
+            <strong class="text-white">Short version.</strong> We do not make accounts, we do not track you, we do not ask for your location, we do not sell anything. The app shows you incidents Phoenix Fire publishes publicly. That is it.
+        </div>
 
-    <h2>What you see in the app</h2>
-    <p>Active fire and EMS incidents from the City of Phoenix Fire Department's public incident dashboard. Each row is exactly what dispatch publishes: a location, a category, the units assigned, and a timestamp. We add a human label for cryptic codes (for example, Phoenix's <code>962</code> becomes <code>Vehicle Crash</code> in our display) but the underlying data is theirs, not ours.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">What we collect</h2>
+        <div class="overflow-x-auto mb-6">
+            <table class="w-full text-sm border-collapse">
+                <thead>
+                    <tr class="bg-grey-900">
+                        <th class="text-left font-semibold text-white px-4 py-3 border-b border-grey-800">Data</th>
+                        <th class="text-left font-semibold text-white px-4 py-3 border-b border-grey-800">Why</th>
+                        <th class="text-left font-semibold text-white px-4 py-3 border-b border-grey-800">Stored</th>
+                    </tr>
+                </thead>
+                <tbody class="text-grey-300">
+                    <tr>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">Your IP address</td>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">Rate-limit abusive clients (anonymous users get one feed pull per ten minutes)</td>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">In server logs for 7 days, then auto rotated</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">The fact that someone hit our API</td>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">Aggregate counters for capacity planning</td>
+                        <td class="px-4 py-3 border-b border-grey-800 align-top">Yes, but not tied to identity</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <h2>What about the paid tier?</h2>
-    <p>If you subscribe (when paid tier launches), our payment processor (Stripe or RevenueCat for in-app purchase) handles your card details. We never see them. We receive only a subscriber identifier and a boolean: paid or not paid. No name, no email, no card. To send custom alerts when paid features land, we will ask for explicit permission at that moment, and you can revoke it in iOS Settings any time.</p>
+        <p class="text-grey-300 leading-relaxed mb-4">That is the entire list. We do not collect:</p>
+        <ul class="list-disc pl-6 space-y-2 text-grey-300 mb-8 leading-relaxed">
+            <li>Your name, email, phone number, or address</li>
+            <li>Your physical location or GPS coordinates</li>
+            <li>Your contacts, photos, or any device data beyond what every web request transmits</li>
+            <li>Cookies, advertising identifiers, or fingerprinting data</li>
+            <li>Anything from third-party trackers (we use none)</li>
+        </ul>
 
-    <h2>Third parties</h2>
-    <p>We host on DigitalOcean (server) and Cloudflare (DNS). They see traffic in transit but never any user data because we don't have any. We do not use Google Analytics, Facebook Pixel, Mixpanel, Segment, or any other analytics or tracking SDK in the iOS app or on this website.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">What you see in the app</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">Active fire and EMS incidents from the City of Phoenix Fire Department public incident dashboard. Each row is exactly what dispatch publishes: a location, a category, the units assigned, and a timestamp. We add a human label for cryptic codes (for example, Phoenix <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962</code> becomes <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">Vehicle Crash</code> in our display) but the underlying data is theirs, not ours.</p>
 
-    <h2>Data we attribute</h2>
-    <p>Phoenix Fire incident data comes from the City of Phoenix Fire Department's public ArcGIS endpoint, used under the City's <a href="https://www.phoenixopendata.com" target="_blank" rel="noopener">Open Data Policy</a>. We poll once per minute, cache it for our users, and add attribution in the app. We are not affiliated with the City of Phoenix.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">What about the paid tier</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">If you subscribe, our payment processor (Apple App Store via RevenueCat for in-app purchase) handles your card details. We never see them. We receive only a subscriber identifier and a boolean: paid or not paid. No name, no email, no card. To send custom alerts when paid features land, we will ask for explicit permission at that moment, and you can revoke it in iOS Settings any time.</p>
 
-    <h2>Children</h2>
-    <p>Cactus Watch is not directed at children under 13 and we do not knowingly collect data from them. The app shows public-safety incidents, which can include sensitive content; parental discretion is advised.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Third parties</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">We host on DigitalOcean (server) and Cloudflare (DNS). They see traffic in transit but never any user data because we do not have any. We do not use Google Analytics, Facebook Pixel, Mixpanel, Segment, or any other analytics or tracking SDK in the iOS app or on this website.</p>
 
-    <h2>Changes to this policy</h2>
-    <p>If we ever change what we collect, we will update this page and bump the "Effective" date above. For material changes that affect existing users (extremely unlikely given our data minimization), we will surface an in-app notice.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Data we attribute</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">Phoenix Fire incident data comes from the City of Phoenix Fire Department public ArcGIS endpoint, used under the City <a href="https://www.phoenixopendata.com" target="_blank" rel="noopener" class="text-white underline underline-offset-2 hover:text-grey-300">Open Data Policy</a>. We poll once per minute, cache it for our users, and add attribution in the app. We are not affiliated with the City of Phoenix.</p>
 
-    <h2>Contact</h2>
-    <p>Questions, complaints, or data deletion requests: <a href="mailto:tradebridge2026@gmail.com">tradebridge2026@gmail.com</a>. We respond within 7 days.</p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Children</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">Cactus Watch is not directed at children under 13 and we do not knowingly collect data from them. The app shows public safety incidents, which can include sensitive content; parental discretion is advised.</p>
 
-    <footer>
-      <p><a href="/">Back to home</a> · <a href="/terms">Terms of Service</a> · <a href="/about">About</a></p>
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Changes to this policy</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">If we ever change what we collect, we will update this page and bump the Effective date above. For material changes that affect existing users (extremely unlikely given our data minimization), we will surface an in-app notice.</p>
+
+        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Contact</h2>
+        <p class="text-grey-300 leading-relaxed mb-6">Questions, complaints, or data deletion requests: <a href="mailto:tradebridge2026@gmail.com" class="text-white underline underline-offset-2 hover:text-grey-300">tradebridge2026@gmail.com</a>. We respond within 7 days.</p>
+    </main>
+
+    <footer class="py-12 bg-[#0A0A0A] text-grey-500 border-t border-grey-800">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2 font-bold text-white tracking-tight">
+                <img src="/favicon.svg" alt="" width="28" height="28" class="block">
+                <span>Cactus Watch</span>
+            </div>
+            <div class="flex gap-8 text-sm font-medium">
+                <a href="/privacy/" class="hover:text-white transition-colors">Privacy</a>
+                <a href="/terms/" class="hover:text-white transition-colors">Terms</a>
+                <a href="/about/" class="hover:text-white transition-colors">About</a>
+                <a href="/faq/" class="hover:text-white transition-colors">FAQ</a>
+                <a href="mailto:tradebridge2026@gmail.com" class="hover:text-white transition-colors">Support</a>
+            </div>
+            <div class="text-sm font-medium">Built in Phoenix. &copy; 2026.</div>
+        </div>
     </footer>
-  </div>
 </body>
 </html>

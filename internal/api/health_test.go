@@ -49,6 +49,27 @@ func TestHealthOKWhenSourceFreshAndCanaryPassing(t *testing.T) {
 	}
 }
 
+func TestHealthAllowsHeadProbe(t *testing.T) {
+	now := time.Date(2026, 5, 4, 12, 10, 0, 0, time.UTC)
+	lastSuccess := now.Add(-2 * time.Minute)
+	st := &fakeStore{
+		sourceHealth: []store.SourceHealth{{
+			Source:        "phoenix-fire-mapserver",
+			LastSuccessAt: &lastSuccess,
+			ParserVersion: "phx-fire-2026-05",
+		}},
+	}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodHead, "/v1/health", nil)
+
+	Router(st, Config{Sources: []string{"phoenix-fire-mapserver"}, Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestHealthDegradedWhenCanaryFailsButSourceFresh(t *testing.T) {
 	now := time.Date(2026, 5, 4, 12, 10, 0, 0, time.UTC)
 	lastSuccess := now.Add(-2 * time.Minute)

@@ -67,4 +67,5 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	r.Get("/v1/codes", codesHandler())
 	r.Get("/v1/openapi.json", openAPIHandler())
 	r.Get("/v1/health", healthHandler(st, cfg, log))
+	r.Head("/v1/health", healthHandler(st, cfg, log))
 }

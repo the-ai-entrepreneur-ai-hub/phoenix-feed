@@ -188,6 +188,53 @@ func TestActiveIncidentsAddsSeverity(t *testing.T) {
 	}
 }
 
+func TestActiveIncidentsKeepsLongRunningObservedIncident(t *testing.T) {
+	now := time.Date(2026, 5, 18, 6, 2, 0, 0, time.UTC)
+	dispatchedAt := now.Add(-2*time.Hour - 23*time.Minute)
+	lastSeenAt := now.Add(-45 * time.Second)
+	st := &fakeStore{
+		activeResult: store.ActiveIncidentsResult{
+			Incidents: []store.ActiveIncident{{
+				Source:               "phoenix-fire-mapserver",
+				IncidentID:           "F26209999",
+				NatureCode:           "MTNRES",
+				NatureDesc:           "Mountain Rescue",
+				Units:                []model.Unit{{Unit: "E611", Status: "Dispatched"}},
+				Lon:                  -112.074,
+				Lat:                  33.448,
+				IncidentDate:         dispatchedAt,
+				ReceivedAt:           dispatchedAt,
+				LastSeenAt:           lastSeenAt,
+				SecondsSinceLastSeen: 45,
+			}},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	incidents := body["incidents"].([]any)
+	if len(incidents) != 1 {
+		t.Fatalf("incidents length = %d, want 1", len(incidents))
+	}
+	first := incidents[0].(map[string]any)
+	if got := first["incident_id"]; got != "F26209999" {
+		t.Fatalf("incident_id = %v, want F26209999", got)
+	}
+	if got := first["seconds_since_last_seen"]; got != float64(45) {
+		t.Fatalf("seconds_since_last_seen = %v, want 45", got)
+	}
+}
+
 func TestActiveIncidentsParsesBBoxFilter(t *testing.T) {
 	st := &fakeStore{}
 	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active?bbox=-112.2,33.2,-111.7,33.8", nil)

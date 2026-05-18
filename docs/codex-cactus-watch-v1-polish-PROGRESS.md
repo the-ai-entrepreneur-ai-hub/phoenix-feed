@@ -4,7 +4,7 @@ This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.
 
 **Brief:** `codex-cactus-watch-v1-polish.md`
 **Started:** 2026-05-18T08:48:39Z
-**Last update:** 2026-05-18T09:00:37Z
+**Last update:** 2026-05-18T09:02:45Z
 
 ---
 
@@ -35,6 +35,7 @@ This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.
 | 2026-05-18T08:52:36Z | cactus-watch-ui-tightening-5061 | OpenSpec scaffold | DONE | 71ce911 | strict validate passed |
 | 2026-05-18T08:52:57Z | cactus-watch-landing-azincidents-mirror | Landing and active-window implementation | STARTED | - | reading landing and backend paths |
 | 2026-05-18T09:00:37Z | cactus-watch-landing-azincidents-mirror | Landing and active-window implementation | DONE | 87ff15f | local validators green |
+| 2026-05-18T09:02:45Z | cactus-watch-landing-azincidents-mirror | API health HEAD probe | DONE | 99942cc | curl -sI compatible |
 
 ---
 

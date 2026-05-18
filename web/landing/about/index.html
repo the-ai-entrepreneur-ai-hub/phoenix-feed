@@ -29,45 +29,41 @@
 
   <main class="ppage-content-shell">
     <article class="ppage-content">
-<h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-10">About Cactus Watch</h1>
+      <p class="ppage-callout">Phoenix Fire publishes every active call to a public dashboard. Most people never see it because the dashboard is not designed for phones, does not filter to your neighborhood, and uses dispatch codes a civilian cannot read. Cactus Watch fixes those three things.</p>
 
-        <div class="text-xl leading-relaxed border-l-2 border-white pl-5 text-grey-200 mb-12">
-            Phoenix Fire publishes every active call to a public dashboard. Most people never see it because the dashboard is not designed for phones, does not filter to your neighborhood, and uses dispatch codes a civilian cannot read. Cactus Watch fixes those three things.
-        </div>
+      <h2>What it does</h2>
+      <p>You open the app and you see what Phoenix Fire is responding to right now. A vehicle crash on I-10. A working structure fire on McDowell. A mountain rescue at Camelback. Each row tells you the kind of call, where, when it came in, and which units are responding. That is the entire product on the free tier, and that is intentional.</p>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">What it does</h2>
-        <p class="text-grey-300 leading-relaxed mb-6">You open the app and you see what Phoenix Fire is responding to right now. A vehicle crash on I-10. A working structure fire on McDowell. A mountain rescue at Camelback. Each row tells you the kind of call, where, when it came in, and which units are responding. That is the entire product on the free tier, and that is intentional.</p>
+      <h2>What it does not do</h2>
+      <ul>
+        <li>It does not replace 911. If you have an emergency, call 911.</li>
+        <li>It does not notify you on the free tier. The free tier shows what is happening; it does not ping your phone. Custom proximity alerts come with Plus, and only with your explicit permission.</li>
+        <li>It does not track you. We do not ask for location, contacts, or notifications until features actually need them.</li>
+        <li>It does not show you names, photos, or anything personally identifying. Phoenix feed contains intersections, not addresses of victims.</li>
+      </ul>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">What it does not do</h2>
-        <ul class="list-disc pl-6 space-y-2 text-grey-300 mb-8 leading-relaxed">
-            <li>It does not replace 911. If you have an emergency, call 911.</li>
-            <li>It does not notify you on the free tier. The free tier shows what is happening; it does not ping your phone. Custom proximity alerts come with Plus, and only with your explicit permission.</li>
-            <li>It does not track you. We do not ask for location, contacts, or notifications until features actually need them.</li>
-            <li>It does not show you names, photos, or anything personally identifying. Phoenix feed contains intersections, not addresses of victims.</li>
-        </ul>
+      <h2>Where the data comes from</h2>
+      <p>The City of Phoenix Fire Department publishes a real-time map of active incidents at <code>maps.phoenix.gov</code>, refreshed every minute. The City makes this data available under its <a href="https://www.phoenixopendata.com" target="_blank" rel="noopener">Open Data Policy</a>. We poll the City public endpoint every 60 seconds, cache the result on our own server, and serve it to your phone. This way, thousands of users opening the app at the same time hit our cache, not the City server.</p>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Where the data comes from</h2>
-        <p class="text-grey-300 leading-relaxed mb-6">The City of Phoenix Fire Department publishes a real-time map of active incidents at <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">maps.phoenix.gov</code>, refreshed every minute. The City makes this data available under its <a href="https://www.phoenixopendata.com" target="_blank" rel="noopener" class="text-white underline underline-offset-2 hover:text-grey-300">Open Data Policy</a>. We poll the City public endpoint every 60 seconds, cache the result on our own server, and serve it to your phone. This way, thousands of users opening the app at the same time hit our cache, not the City server.</p>
+      <p>We add small enhancements to make the data civilian-readable: Phoenix <code>962</code> code becomes <code>Vehicle Crash</code>, <code>STR</code> becomes <code>Structure Fire</code>, and so on. The underlying location, time, and unit information is exactly what dispatch published.</p>
 
-        <p class="text-grey-300 leading-relaxed mb-6">We add small enhancements to make the data civilian-readable: Phoenix <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962</code> code becomes <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">Vehicle Crash</code>, <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">STR</code> becomes <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">Structure Fire</code>, and so on. The underlying location, time, and unit information is exactly what dispatch published.</p>
+      <h2>Why we built it</h2>
+      <p>Because situational awareness should not require a police scanner, a Twitter feed, or a journalism degree. Most Phoenix residents discover that a fire is on their street when they smell smoke or hear sirens, five to fifteen minutes after dispatch knew about it. With Cactus Watch, that window narrows to as little as a minute. Not because we are doing anything special, but because Phoenix has been publishing this data publicly for years and nobody made it usable on a phone.</p>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Why we built it</h2>
-        <p class="text-grey-300 leading-relaxed mb-6">Because situational awareness should not require a police scanner, a Twitter feed, or a journalism degree. Most Phoenix residents discover that a fire is on their street when they smell smoke or hear sirens, five to fifteen minutes after dispatch knew about it. With Cactus Watch, that window narrows to as little as a minute. Not because we are doing anything special, but because Phoenix has been publishing this data publicly for years and nobody made it usable on a phone.</p>
+      <h2>Who built it</h2>
+      <p>Cactus Watch is independently developed in 2026 by a small team out of Arizona. We are not affiliated with the City of Phoenix, the Phoenix Fire Department, or any government agency. We support transparent public safety data and operate under each agency published open data terms.</p>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Who built it</h2>
-        <p class="text-grey-300 leading-relaxed mb-6">Cactus Watch is independently developed in 2026 by a small team out of Arizona. We are not affiliated with the City of Phoenix, the Phoenix Fire Department, or any government agency. We support transparent public safety data and operate under each agency published open data terms.</p>
+      <h2>How we keep the lights on</h2>
+      <p>Server costs run about $22 per month on a single DigitalOcean droplet. The free tier is genuinely free with no ads and no data sale. Cactus Watch Plus is $6.99 per month or $76.99 per year and pays for additional infrastructure plus development time.</p>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">How we keep the lights on</h2>
-        <p class="text-grey-300 leading-relaxed mb-6">Server costs run about $22 per month on a single DigitalOcean droplet. The free tier is genuinely free with no ads and no data sale. Cactus Watch Plus is $6.99 per month or $76.99 per year and pays for additional infrastructure plus development time.</p>
+      <h2>Coming next</h2>
+      <ul>
+        <li><strong>Multi-city expansion.</strong> Mesa, Tempe, Tucson, Glendale, Scottsdale, wherever a public CAD feed exists.</li>
+        <li><strong>Scanner-derived transcripts.</strong> For agencies without a public CAD feed, we transcribe the radio dispatch directly. Slower but covers gaps.</li>
+        <li><strong>Custom alerts.</strong> Tell me when something happens within two miles of my house. Opt-in only.</li>
+      </ul>
 
-        <h2 class="text-2xl font-semibold tracking-tight mt-14 mb-5 pb-3 border-b border-grey-800">Coming next</h2>
-        <ul class="list-disc pl-6 space-y-2 text-grey-300 mb-8 leading-relaxed">
-            <li><strong class="text-white">Multi-city expansion.</strong> Mesa, Tempe, Tucson, Glendale, Scottsdale, wherever a public CAD feed exists.</li>
-            <li><strong class="text-white">Scanner-derived transcripts.</strong> For agencies without a public CAD feed, we transcribe the radio dispatch directly. Slower but covers gaps.</li>
-            <li><strong class="text-white">Custom alerts.</strong> Tell me when something happens within two miles of my house. Opt-in only.</li>
-        </ul>
-
-        <p class="text-grey-300 leading-relaxed mb-6">None of these features are required to start. The launch promise is one screen of useful information, and that already works today.</p>
+      <p>None of these features are required to start. The launch promise is one screen of useful information, and that already works today.</p>
     </article>
   </main>
 

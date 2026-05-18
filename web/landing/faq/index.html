@@ -29,69 +29,41 @@
 
   <main class="ppage-content-shell">
     <article class="ppage-content">
-<h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-10">Frequently asked questions</h1>
+      <h2>Is this affiliated with the Phoenix Fire Department?</h2>
+      <p>No. We are an independent third party that uses Phoenix publicly published incident feed under the City Open Data Policy. We do not represent the City and we are not endorsed by them.</p>
 
-        <div class="space-y-10">
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Is this affiliated with the Phoenix Fire Department?</h2>
-                <p class="text-grey-300 leading-relaxed">No. We are an independent third party that uses Phoenix publicly published incident feed under the City Open Data Policy. We do not represent the City and we are not endorsed by them.</p>
-            </div>
+      <h2>Can I rely on this for emergency response?</h2>
+      <p>No. Cactus Watch is for situational awareness only. If you have an emergency, call 911. Our data can be delayed, incomplete, or temporarily unavailable. Do not make safety-critical decisions based on what you see in the app.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Can I rely on this for emergency response?</h2>
-                <p class="text-grey-300 leading-relaxed">No. Cactus Watch is for situational awareness only. If you have an emergency, call 911. Our data can be delayed, incomplete, or temporarily unavailable. Do not make safety-critical decisions based on what you see in the app.</p>
-            </div>
+      <h2>How fresh is the data?</h2>
+      <p>We pull the City feed every 60 seconds. The free tier of the app refreshes on the same cadence. Cactus Watch Plus subscribers see incidents the moment they hit our cache with zero artificial delay.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">How fresh is the data?</h2>
-                <p class="text-grey-300 leading-relaxed">We pull the City feed every 60 seconds. The free tier of the app refreshes on the same cadence. Cactus Watch Plus subscribers see incidents the moment they hit our cache with zero artificial delay.</p>
-            </div>
+      <h2>Why does Cactus Watch Plus exist?</h2>
+      <p>Because we want the free tier to actually be free with no ads and no data sale. A paid tier funded by users who need push alerts and station overlays is the only honest way to do that. The free tier still gives you the real product: live incidents in your city. Plus adds the alerts and overlays.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Why does Cactus Watch Plus exist?</h2>
-                <p class="text-grey-300 leading-relaxed">Because we want the free tier to actually be free with no ads and no data sale. A paid tier funded by users who need push alerts and station overlays is the only honest way to do that. The free tier still gives you the real product: live incidents in your city. Plus adds the alerts and overlays.</p>
-            </div>
+      <h2>What does 962 mean? Why do I see it sometimes?</h2>
+      <p>It is a Phoenix CAD code for vehicle crash. Phoenix feed sends most codes with human-readable descriptions, but a few are sent as raw codes. We translate the most common ones (<code>962</code> to Vehicle Crash, <code>962BC</code> to Crash Involving Bicycle, and so on) so you do not have to memorize dispatch jargon. If you see a code we have not translated yet, email us and we will add it.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">What does 962 mean? Why do I see it sometimes?</h2>
-                <p class="text-grey-300 leading-relaxed">It is a Phoenix CAD code for vehicle crash. Phoenix feed sends most codes with human-readable descriptions, but a few are sent as raw codes. We translate the most common ones (<code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962</code> to Vehicle Crash, <code class="bg-grey-900 border border-grey-800 px-1.5 py-0.5 rounded text-grey-200 text-[0.92rem]">962BC</code> to Crash Involving Bicycle, etc.) so you do not have to memorize dispatch jargon. If you see a code we have not translated yet, email us and we will add it.</p>
-            </div>
+      <h2>Why do not I see police calls?</h2>
+      <p>Phoenix Police runs a separate dispatch system that is not publicly published in the same way. We are exploring scanner-derived police call transcripts as a future paid feature, but it is not currently available.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Why do not I see police calls?</h2>
-                <p class="text-grey-300 leading-relaxed">Phoenix Police runs a separate dispatch system that is not publicly published in the same way. We are exploring scanner-derived police call transcripts as a future paid feature, but it is not currently available.</p>
-            </div>
+      <h2>Why do not I see calls in Mesa, Tempe, Glendale?</h2>
+      <p>Each city runs its own dispatch system. We launch with Phoenix because it is the largest population center and has the cleanest public feed. Mesa, Tempe, Glendale, Scottsdale, Tucson are next, in roughly that order, after we have paying subscribers to fund the work.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Why do not I see calls in Mesa, Tempe, Glendale?</h2>
-                <p class="text-grey-300 leading-relaxed">Each city runs its own dispatch system. We launch with Phoenix because it is the largest population center and has the cleanest public feed. Mesa, Tempe, Glendale, Scottsdale, Tucson are next, in roughly that order, after we have paying subscribers to fund the work.</p>
-            </div>
+      <h2>Does the app drain my battery?</h2>
+      <p>No. We do not run in the background. The app only refreshes while you have it open. No GPS polling, no location tracking, nothing happening when the screen is off.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Does the app drain my battery?</h2>
-                <p class="text-grey-300 leading-relaxed">No. We do not run in the background. The app only refreshes while you have it open. No GPS polling, no location tracking, nothing happening when the screen is off.</p>
-            </div>
+      <h2>Why does the app ask for my location?</h2>
+      <p>Only when you tap the locate-me button on the map to center it on you. Location is never tracked in the background and is never shared with any third party.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Why does the app ask for my location?</h2>
-                <p class="text-grey-300 leading-relaxed">Only when you tap the locate-me button on the map to center it on you. Location is never tracked in the background and is never shared with any third party.</p>
-            </div>
+      <h2>Where can I report a bug or request a feature?</h2>
+      <p>Email <a href="mailto:tradebridge2026@gmail.com">tradebridge2026@gmail.com</a>. We read every message.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Where can I report a bug or request a feature?</h2>
-                <p class="text-grey-300 leading-relaxed">Email <a href="mailto:tradebridge2026@gmail.com" class="text-white underline underline-offset-2 hover:text-grey-300">tradebridge2026@gmail.com</a>. We read every message.</p>
-            </div>
+      <h2>How do I delete my data?</h2>
+      <p>There is nothing tied to you to delete. We do not have your name, email, location, or any account. Server logs that include your IP address are auto-rotated after 7 days. If you want to be sure, just stop using the app.</p>
 
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">How do I delete my data?</h2>
-                <p class="text-grey-300 leading-relaxed">There is nothing tied to you to delete. We do not have your name, email, location, or any account. Server logs that include your IP address are auto-rotated after 7 days. If you want to be sure, just stop using the app.</p>
-            </div>
-
-            <div>
-                <h2 class="text-lg font-semibold text-white mb-3">Is Cactus Watch open source?</h2>
-                <p class="text-grey-300 leading-relaxed">The backend is currently closed source while we stabilize the data pipeline. We may open source the iOS app and parts of the backend after launch. The data we consume is already public; the value we add is the labels, caching, and packaging.</p>
-            </div>
-        </div>
+      <h2>Is Cactus Watch open source?</h2>
+      <p>The backend is currently closed source while we stabilize the data pipeline. We may open source the iOS app and parts of the backend after launch. The data we consume is already public; the value we add is the labels, caching, and packaging.</p>
     </article>
   </main>
 

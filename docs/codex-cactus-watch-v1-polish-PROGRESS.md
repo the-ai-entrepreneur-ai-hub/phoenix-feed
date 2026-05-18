@@ -4,7 +4,7 @@ This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.
 
 **Brief:** `codex-cactus-watch-v1-polish.md`
 **Started:** 2026-05-18T08:48:39Z
-**Last update:** 2026-05-18T09:27:53Z
+**Last update:** 2026-05-18T09:28:20Z
 
 ---
 
@@ -40,6 +40,7 @@ This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.
 | 2026-05-18T09:08:20Z | cactus-watch-ui-tightening-5061 | UI tightening implementation | STARTED | - | reading Flutter UI paths |
 | 2026-05-18T09:24:59Z | cactus-watch-ui-tightening-5061 | UI tightening implementation | DONE | d3faefb | flutter analyze/test green |
 | 2026-05-18T09:27:53Z | cactus-watch-ui-tightening-5061 | Four-tile viewport test | DONE | 3be96c8 | flutter test 184 green |
+| 2026-05-18T09:28:20Z | both | Final summary | DONE | - | ready for George review |
 
 ---
 
@@ -53,6 +54,35 @@ If Codex needs a decision, log the question here in numbered list form. George w
 
 ## Final summary
 
-When ALL tasks across both changes hit DONE, Codex pastes the verification output block from the brief here, then commits one final time with message `chore(progress): final summary, ready for George review`.
+Ready for George to bump floor and trigger build 5061.
 
-_(populated by Codex at end of run)_
+```
+[ Change 1: cactus-watch-landing-azincidents-mirror ]
+- openspec validate strict passed:    YES
+- legacy azincidentalert layout mirrored:    YES
+- 4 sub-pages reverted to cream/light style:    YES
+- 3 hero images resized + WebP siblings present:    YES
+- no tailwind/google fonts/external scripts in HTML:    YES
+- backend active-window filter fix landed:    YES
+- backend test for long-running incident green:    YES
+- committed and pushed (hash):    YES  hash=87ff15f,99942cc
+- SSH deploy succeeded, curl https://cactuswatch.com returns 200 with new title:    YES
+- existing privacy/terms/about/faq content preserved exactly:    YES
+- API still healthy (curl /v1/health):    YES
+
+[ Change 2: cactus-watch-ui-tightening-5061 ]
+- openspec validate strict passed:    YES
+- all dark mode tiles share a single neutral background:    YES
+- address text passes WCAG AA contrast in dark mode:    YES
+- font density restored to 5054 baseline (4+ tiles fit):    YES
+- premature unit-added SnackBar removed:    YES
+- long incident titles wrap to 2 lines, no clip:    YES
+- 962 + variants translated to human labels at ingestion:    YES
+- flutter analyze --no-pub clean:    YES
+- flutter test --no-pub passes (total tests: 184):    YES
+- committed and pushed (hash):    YES  hash=d3faefb,3be96c8
+- BUILD_FLOOR NOT bumped, Codemagic NOT triggered (awaiting George):    YES
+- existing 10 themes still selectable:    YES
+- existing Crashlytics wiring intact:    YES
+- existing StoreKit prices unchanged:    YES
+```

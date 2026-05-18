@@ -3,8 +3,8 @@
 This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.md`. Codex appends a row after every committed task and pushes immediately so George can `git pull` and watch progress in real time.
 
 **Brief:** `codex-cactus-watch-v1-polish.md`
-**Started:** _to be filled by Codex on first append_
-**Last update:** _to be filled by Codex on every append_
+**Started:** 2026-05-18T08:48:39Z
+**Last update:** 2026-05-18T08:48:39Z
 
 ---
 
@@ -30,9 +30,7 @@ This file is the live audit trail for the work in `codex-cactus-watch-v1-polish.
 
 | UTC time | change-id | task | status | commit | notes |
 |---|---|---|---|---|---|
-| _example_ | _cactus-watch-landing-azincidents-mirror_ | _spec scaffolding_ | _STARTED_ | _-_ | _drafting proposal.md_ |
-
-(remove the example row when you write the first real entry)
+| 2026-05-18T08:48:39Z | both | Read brief and create OpenSpec change directories | STARTED | - | read brief; starting spec scaffolds |
 
 ---
 

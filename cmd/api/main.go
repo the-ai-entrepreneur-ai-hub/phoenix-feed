@@ -43,6 +43,7 @@ func main() {
 
 	api.RegisterRoutes(r, st, api.Config{
 		DefaultParserVersion: phxfire.ParserVersion,
+		AdminToken:           cfg.AdminToken,
 		AllowedOrigins:       cfg.AllowedOrigins,
 		FireStationsURL:      cfg.FireStationsURL,
 		PaidTierEnabled:      cfg.PaidTierEnabled,

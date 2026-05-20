@@ -42,6 +42,11 @@ type ActiveIncidentFilter struct {
 	Until  *time.Time
 }
 
+type RecentIncidentFilter struct {
+	Hours int
+	Limit int
+}
+
 type StalenessMeta struct {
 	SourceLastSuccessAt *time.Time `json:"source_last_success_at"`
 	DataAgeSeconds      *int       `json:"data_age_seconds"`
@@ -74,6 +79,11 @@ type ActiveIncident struct {
 type ActiveIncidentsResult struct {
 	Meta      StalenessMeta    `json:"meta"`
 	Incidents []ActiveIncident `json:"incidents"`
+}
+
+type RecentIncidentsResult struct {
+	TotalCount int
+	Incidents  []ActiveIncident
 }
 
 type IncidentDetail struct {
@@ -269,6 +279,74 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 	}
 
 	return ActiveIncidentsResult{Meta: meta, Incidents: incidents}, nil
+}
+
+// ListRecentIncidents returns a newest-first admin view over the same incident
+// store used by the active feed. Cleared incidents remain eligible while their
+// incident_date falls inside the requested window.
+func (s *Store) ListRecentIncidents(ctx context.Context, filter RecentIncidentFilter) (RecentIncidentsResult, error) {
+	if filter.Hours <= 0 {
+		return RecentIncidentsResult{}, fmt.Errorf("recent incident hours must be positive")
+	}
+	if filter.Limit <= 0 {
+		filter.Limit = 500
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT source, incident_id, nature_code, nature_desc, units, channel,
+		       symbol_code, location_text, ST_X(geom), ST_Y(geom), incident_date,
+		       received_at, last_seen_at,
+		       (SELECT started_at FROM source_polls WHERE success = TRUE ORDER BY started_at DESC LIMIT 1) AS source_last_success_at,
+		       GREATEST(0, EXTRACT(EPOCH FROM (NOW() - last_seen_at))::int) AS seconds_since_last_seen,
+		       COUNT(*) OVER()::int AS total_count
+		FROM incidents
+		WHERE geom IS NOT NULL
+		  AND incident_date >= NOW() - ($1::int * INTERVAL '1 hour')
+		ORDER BY incident_date DESC, incident_id
+		LIMIT $2`, filter.Hours, filter.Limit,
+	)
+	if err != nil {
+		return RecentIncidentsResult{}, err
+	}
+	defer rows.Close()
+
+	result := RecentIncidentsResult{Incidents: []ActiveIncident{}}
+	for rows.Next() {
+		inc := ActiveIncident{Units: []model.Unit{}}
+		var unitsBytes []byte
+		var natureCode, natureDesc, channel, symbolCode, locationText sql.NullString
+		var lastSuccess sql.NullTime
+		var totalCount int
+		if err := rows.Scan(
+			&inc.Source, &inc.IncidentID, &natureCode, &natureDesc, &unitsBytes, &channel,
+			&symbolCode, &locationText, &inc.Lon, &inc.Lat, &inc.IncidentDate,
+			&inc.ReceivedAt, &inc.LastSeenAt, &lastSuccess, &inc.SecondsSinceLastSeen, &totalCount,
+		); err != nil {
+			return RecentIncidentsResult{}, err
+		}
+		inc.NatureCode = nullString(natureCode)
+		inc.NatureDesc = nullString(natureDesc)
+		inc.Channel = nullString(channel)
+		inc.SymbolCode = nullString(symbolCode)
+		inc.LocationText = nullString(locationText)
+		if lastSuccess.Valid {
+			inc.SourceLastSuccessAt = &lastSuccess.Time
+		}
+		if len(unitsBytes) > 0 {
+			if err := json.Unmarshal(unitsBytes, &inc.Units); err != nil {
+				return RecentIncidentsResult{}, fmt.Errorf("decode units for %s/%s: %w", inc.Source, inc.IncidentID, err)
+			}
+			if inc.Units == nil {
+				inc.Units = []model.Unit{}
+			}
+		}
+		result.TotalCount = totalCount
+		result.Incidents = append(result.Incidents, inc)
+	}
+	if err := rows.Err(); err != nil {
+		return RecentIncidentsResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) {

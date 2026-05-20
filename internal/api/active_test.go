@@ -18,6 +18,9 @@ type fakeStore struct {
 	activeFilter store.ActiveIncidentFilter
 	activeResult store.ActiveIncidentsResult
 	activeErr    error
+	recentFilter store.RecentIncidentFilter
+	recentResult store.RecentIncidentsResult
+	recentErr    error
 	statsResult  store.PublicStats
 	statsErr     error
 
@@ -37,6 +40,11 @@ type fakeStore struct {
 func (f *fakeStore) ListActiveIncidents(_ context.Context, filter store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error) {
 	f.activeFilter = filter
 	return f.activeResult, f.activeErr
+}
+
+func (f *fakeStore) ListRecentIncidents(_ context.Context, filter store.RecentIncidentFilter) (store.RecentIncidentsResult, error) {
+	f.recentFilter = filter
+	return f.recentResult, f.recentErr
 }
 
 func (f *fakeStore) PublicStats(_ context.Context) (store.PublicStats, error) {

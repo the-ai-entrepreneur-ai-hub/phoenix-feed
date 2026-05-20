@@ -28,6 +28,19 @@ func TestLoadPaidTierEnabledFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadAdminTokenFromEnv(t *testing.T) {
+	t.Setenv("ADMIN_TOKEN", "admin-secret")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.AdminToken != "admin-secret" {
+		t.Fatalf("AdminToken = %q, want admin-secret", cfg.AdminToken)
+	}
+}
+
 func TestLoadAllowedOriginsDefaultsEmpty(t *testing.T) {
 	t.Setenv("ALLOWED_ORIGINS", "")
 

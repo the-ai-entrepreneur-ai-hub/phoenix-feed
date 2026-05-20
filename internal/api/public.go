@@ -87,6 +87,14 @@ func openAPIDocument() map[string]any {
 			"/v1/incidents/history": map[string]any{
 				"get": map[string]any{"summary": "Paid history placeholder"},
 			},
+			"/api/admin/incidents/recent": map[string]any{
+				"get": map[string]any{
+					"summary": "Admin-only recent incident history",
+					"parameters": []map[string]any{
+						{"name": "hours", "in": "query", "schema": map[string]string{"type": "integer"}},
+					},
+				},
+			},
 			"/v1/stats": map[string]any{
 				"get": map[string]any{"summary": "Public live feed statistics"},
 			},

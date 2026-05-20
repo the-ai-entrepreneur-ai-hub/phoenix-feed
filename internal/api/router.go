@@ -17,6 +17,7 @@ import (
 type Store interface {
 	GetIncidentDetail(context.Context, string, string) (store.IncidentDetailResult, error)
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
+	ListRecentIncidents(context.Context, store.RecentIncidentFilter) (store.RecentIncidentsResult, error)
 	LookupAPIKey(context.Context, string) (store.APIKey, error)
 	Ping(context.Context) error
 	PublicStats(context.Context) (store.PublicStats, error)
@@ -26,6 +27,7 @@ type Store interface {
 // Config carries API-specific runtime behavior.
 type Config struct {
 	DefaultParserVersion   string
+	AdminToken             string
 	AllowedOrigins         []string
 	FireStationsURL        string
 	FireStationsHTTPClient *http.Client
@@ -58,6 +60,7 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 	cfg.RateLimiter = limiter
 
 	r.Get("/", rootHandler())
+	r.Get("/api/admin/incidents/recent", adminRecentIncidentsHandler(st, cfg, log))
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.Get("/v1/fire-stations", fireStationsHandler(cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))

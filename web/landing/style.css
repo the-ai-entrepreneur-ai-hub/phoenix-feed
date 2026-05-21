@@ -64,7 +64,7 @@ a {
 }
 
 .azlaunch-logo-text {
-  color: #ff1f14;
+  color: #65B02F;
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
@@ -141,19 +141,47 @@ a {
   font-weight: 800;
   border: 2px solid rgba(255, 255, 255, 0.58);
   border-radius: 999px;
-  background: rgba(255, 31, 20, 0.20);
+  background: rgba(101, 176, 47, 0.22);
 }
 
-.azlaunch-stores {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 20px;
+.azlaunch-features {
+  margin: 18px 0 0 22px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 600;
 }
 
-.azlaunch-stores img {
-  height: 42px;
-  width: auto;
+.azlaunch-features li {
+  margin-bottom: 6px;
+}
+
+.azlaunch-beta-note {
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+  max-width: 540px;
+}
+
+.azlaunch-beta-note a {
+  color: #B8E886;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.azlaunch-beta-note a:hover {
+  color: #ffffff;
+}
+
+.azlaunch-disclaimer {
+  margin-top: 22px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+  max-width: 620px;
 }
 
 .azlaunch-images {
@@ -259,7 +287,7 @@ a {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  color: #ff1f14;
+  color: #65B02F;
   font-size: 20px;
   font-weight: 700;
 }
@@ -379,7 +407,7 @@ a {
 }
 
 .ppage-content a {
-  color: #b52118;
+  color: #3F7220;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -410,7 +438,7 @@ a {
 }
 
 .ppage-callout {
-  border-left: 3px solid #ff1f14;
+  border-left: 3px solid #65B02F;
   padding-left: 18px;
   margin-bottom: 32px;
 }
@@ -426,7 +454,7 @@ a {
 }
 
 .ppage-footer a {
-  color: #b52118;
+  color: #3F7220;
 }
 
 @media (max-width: 1100px) {
@@ -460,8 +488,17 @@ a {
     font-size: 22px;
   }
 
-  .azlaunch-stores {
-    justify-content: center;
+  .azlaunch-features {
+    text-align: left;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 360px;
+  }
+
+  .azlaunch-beta-note,
+  .azlaunch-disclaimer {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .azlaunch-images {
@@ -510,12 +547,16 @@ a {
     line-height: 1.5;
   }
 
-  .azlaunch-stores {
-    flex-wrap: wrap;
+  .azlaunch-features {
+    font-size: 15px;
   }
 
-  .azlaunch-stores img {
-    height: 38px;
+  .azlaunch-beta-note {
+    font-size: 14px;
+  }
+
+  .azlaunch-disclaimer {
+    font-size: 11px;
   }
 
   .azlaunch-images {

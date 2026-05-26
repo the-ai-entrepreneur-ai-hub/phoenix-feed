@@ -14,6 +14,7 @@ import (
 func TestIncidentDetailFound(t *testing.T) {
 	incidentDate := time.Date(2026, 5, 4, 10, 0, 0, 0, time.UTC)
 	lastSuccess := time.Date(2026, 5, 4, 10, 1, 0, 0, time.UTC)
+	now := time.Date(2026, 5, 4, 11, 0, 0, 0, time.UTC)
 	st := &fakeStore{
 		detailResult: store.IncidentDetailResult{
 			Meta: store.StalenessMeta{
@@ -47,7 +48,7 @@ func TestIncidentDetailFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/phoenix-fire-mapserver/F26198635", nil)
 
-	Router(st, Config{}, slog.Default()).ServeHTTP(rr, req)
+	Router(st, Config{Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
@@ -79,6 +80,12 @@ func TestIncidentDetailFound(t *testing.T) {
 	}
 	if body.Meta["parser_version"] != "phx-fire-2026-05" {
 		t.Fatalf("parser_version = %v", body.Meta["parser_version"])
+	}
+	if body.Meta["newest_incident_at"] != "2026-05-04T10:00:00Z" {
+		t.Fatalf("newest_incident_at = %v", body.Meta["newest_incident_at"])
+	}
+	if body.Meta["data_staleness_seconds"] != float64(3600) {
+		t.Fatalf("data_staleness_seconds = %v", body.Meta["data_staleness_seconds"])
 	}
 }
 

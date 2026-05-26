@@ -30,6 +30,7 @@ func incidentDetailHandler(st Store, cfg Config, log *slog.Logger) http.HandlerF
 			result.Meta.ParserVersion = cfg.DefaultParserVersion
 		}
 		enrichIncidentDetail(result.Incident)
+		applyIncidentFreshnessMeta(&result.Meta, apiNow(cfg), result.Incident.IncidentDate)
 
 		writeJSON(w, http.StatusOK, result)
 	}

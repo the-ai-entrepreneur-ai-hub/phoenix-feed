@@ -51,9 +51,46 @@ func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg 
 		result.Meta.ParserVersion = cfg.DefaultParserVersion
 	}
 	enrichActiveIncidents(result.Incidents)
+	applyActiveIncidentFreshnessMeta(&result.Meta, apiNow(cfg), result.Incidents)
 	applyCactusMeta(&result.Meta, auth.IdentityFromContext(r.Context()), cfg.RateLimiter, scope)
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+func applyActiveIncidentFreshnessMeta(meta *store.StalenessMeta, now time.Time, incidents []store.ActiveIncident) {
+	if len(incidents) == 0 {
+		applyIncidentFreshnessMeta(meta, now)
+		return
+	}
+
+	dates := make([]time.Time, 0, len(incidents))
+	for _, inc := range incidents {
+		dates = append(dates, inc.IncidentDate)
+	}
+	applyIncidentFreshnessMeta(meta, now, dates...)
+}
+
+func applyIncidentFreshnessMeta(meta *store.StalenessMeta, now time.Time, incidentDates ...time.Time) {
+	if len(incidentDates) == 0 {
+		meta.NewestIncidentAt = nil
+		meta.DataStalenessSeconds = nil
+		return
+	}
+
+	newest := incidentDates[0].UTC()
+	for _, incidentDate := range incidentDates[1:] {
+		candidate := incidentDate.UTC()
+		if candidate.After(newest) {
+			newest = candidate
+		}
+	}
+
+	seconds := int(now.UTC().Sub(newest).Seconds())
+	if seconds < 0 {
+		seconds = 0
+	}
+	meta.NewestIncidentAt = &newest
+	meta.DataStalenessSeconds = &seconds
 }
 
 func applyCactusMeta(meta *store.StalenessMeta, identity auth.Identity, limiter *ratelimit.Limiter, scope ratelimit.Scope) {

@@ -73,16 +73,37 @@ func openAPIDocument() map[string]any {
 						{"name": "since", "in": "query", "schema": map[string]string{"type": "string", "format": "date-time"}},
 						{"name": "until", "in": "query", "schema": map[string]string{"type": "string", "format": "date-time"}},
 					},
+					"responses": activeFeedResponses(),
 				},
 			},
 			"/v1/incidents/refresh": map[string]any{
-				"post": map[string]any{"summary": "Manual active incident refresh read"},
+				"post": map[string]any{
+					"summary":   "Manual active incident refresh read",
+					"responses": activeFeedResponses(),
+				},
 			},
 			"/v1/fire-stations": map[string]any{
 				"get": map[string]any{"summary": "List Phoenix Fire station overlay features"},
 			},
 			"/v1/incidents/{source}/{incident_id}": map[string]any{
-				"get": map[string]any{"summary": "Get incident detail, unit history, and events"},
+				"get": map[string]any{
+					"summary": "Get incident detail, unit history, and events",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Incident detail response",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{
+										"type": "object",
+										"properties": map[string]any{
+											"meta": map[string]any{"$ref": "#/components/schemas/StalenessMeta"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			"/v1/incidents/history": map[string]any{
 				"get": map[string]any{"summary": "Paid history placeholder"},
@@ -106,6 +127,78 @@ func openAPIDocument() map[string]any {
 			},
 			"/v1/health": map[string]any{
 				"get": map[string]any{"summary": "Service health"},
+			},
+		},
+		"components": map[string]any{
+			"schemas": map[string]any{
+				"StalenessMeta": stalenessMetaSchema(),
+			},
+		},
+	}
+}
+
+func activeFeedResponses() map[string]any {
+	return map[string]any{
+		"200": map[string]any{
+			"description": "Active incident feed response",
+			"content": map[string]any{
+				"application/json": map[string]any{
+					"schema": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"meta": map[string]any{"$ref": "#/components/schemas/StalenessMeta"},
+							"incidents": map[string]any{
+								"type":  "array",
+								"items": map[string]any{"type": "object"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func stalenessMetaSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"source_last_success_at": map[string]any{
+				"type":        "string",
+				"format":      "date-time",
+				"nullable":    true,
+				"description": "Timestamp of the latest successful upstream scrape.",
+			},
+			"data_age_seconds": map[string]any{
+				"type":        "integer",
+				"nullable":    true,
+				"description": "Seconds since the latest successful upstream scrape.",
+			},
+			"newest_incident_at": map[string]any{
+				"type":        "string",
+				"format":      "date-time",
+				"nullable":    true,
+				"description": "UTC timestamp of the newest incident_date in this response.",
+			},
+			"data_staleness_seconds": map[string]any{
+				"type":        "integer",
+				"nullable":    true,
+				"description": "Server-computed seconds between response time and newest_incident_at.",
+			},
+			"parser_version": map[string]any{
+				"type": "string",
+			},
+			"disclaimer": map[string]any{
+				"type": "string",
+			},
+			"attribution": map[string]any{
+				"type": "string",
+			},
+			"refresh_min_seconds": map[string]any{
+				"type": "integer",
+			},
+			"tier": map[string]any{
+				"type": "string",
 			},
 		},
 	}

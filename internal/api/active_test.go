@@ -109,11 +109,97 @@ func TestActiveIncidentsEmptyResponseIncludesMeta(t *testing.T) {
 	if got := body.Meta["data_age_seconds"]; got != float64(45) {
 		t.Fatalf("data_age_seconds = %v", got)
 	}
+	if got, ok := body.Meta["newest_incident_at"]; !ok || got != nil {
+		t.Fatalf("newest_incident_at = %v, want null", got)
+	}
+	if got, ok := body.Meta["data_staleness_seconds"]; !ok || got != nil {
+		t.Fatalf("data_staleness_seconds = %v, want null", got)
+	}
 	if got := body.Meta["parser_version"]; got != "phx-fire-2026-05" {
 		t.Fatalf("parser_version = %v", got)
 	}
 	if len(body.Incidents) != 0 {
 		t.Fatalf("incidents length = %d, want 0", len(body.Incidents))
+	}
+}
+
+func TestActiveIncidentsMetaUsesNewestReturnedIncidentDate(t *testing.T) {
+	now := time.Date(2026, 5, 26, 1, 0, 0, 0, time.UTC)
+	lastSuccess := time.Date(2026, 5, 26, 0, 59, 15, 0, time.UTC)
+	st := &fakeStore{
+		activeResult: store.ActiveIncidentsResult{
+			Meta: store.StalenessMeta{
+				SourceLastSuccessAt: &lastSuccess,
+				DataAgeSeconds:      ptrInt(45),
+				ParserVersion:       "phx-fire-2026-05",
+			},
+			Incidents: []store.ActiveIncident{
+				{IncidentID: "older-1", Units: []model.Unit{}, IncidentDate: time.Date(2026, 5, 25, 23, 30, 0, 0, time.UTC)},
+				{IncidentID: "newest", Units: []model.Unit{}, IncidentDate: time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC)},
+				{IncidentID: "older-2", Units: []model.Unit{}, IncidentDate: time.Date(2026, 5, 25, 22, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body struct {
+		Meta map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if got := body.Meta["newest_incident_at"]; got != "2026-05-26T00:00:00Z" {
+		t.Fatalf("newest_incident_at = %v", got)
+	}
+	if got := body.Meta["data_staleness_seconds"]; got != float64(3600) {
+		t.Fatalf("data_staleness_seconds = %v", got)
+	}
+	if got := body.Meta["source_last_success_at"]; got != "2026-05-26T00:59:15Z" {
+		t.Fatalf("source_last_success_at = %v", got)
+	}
+	if got := body.Meta["data_age_seconds"]; got != float64(45) {
+		t.Fatalf("data_age_seconds = %v", got)
+	}
+}
+
+func TestActiveIncidentsMetaStalenessIsZeroWhenNewestEqualsNow(t *testing.T) {
+	now := time.Date(2026, 5, 26, 1, 0, 0, 0, time.UTC)
+	st := &fakeStore{
+		activeResult: store.ActiveIncidentsResult{
+			Incidents: []store.ActiveIncident{{
+				IncidentID:   "current",
+				Units:        []model.Unit{},
+				IncidentDate: now,
+			}},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body struct {
+		Meta map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if got := body.Meta["newest_incident_at"]; got != "2026-05-26T01:00:00Z" {
+		t.Fatalf("newest_incident_at = %v", got)
+	}
+	if got := body.Meta["data_staleness_seconds"]; got != float64(0) {
+		t.Fatalf("data_staleness_seconds = %v", got)
 	}
 }
 

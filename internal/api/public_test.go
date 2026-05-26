@@ -142,4 +142,14 @@ func TestOpenAPIEndpointDocumentsRoutes(t *testing.T) {
 			t.Fatalf("path %s missing from openapi", path)
 		}
 	}
+	components := body["components"].(map[string]any)
+	schemas := components["schemas"].(map[string]any)
+	meta := schemas["StalenessMeta"].(map[string]any)
+	properties := meta["properties"].(map[string]any)
+	if _, ok := properties["newest_incident_at"]; !ok {
+		t.Fatal("newest_incident_at missing from StalenessMeta schema")
+	}
+	if _, ok := properties["data_staleness_seconds"]; !ok {
+		t.Fatal("data_staleness_seconds missing from StalenessMeta schema")
+	}
 }

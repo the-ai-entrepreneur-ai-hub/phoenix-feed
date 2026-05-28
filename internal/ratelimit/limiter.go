@@ -50,10 +50,10 @@ func New(cfg Config) *Limiter {
 		cfg.ManualEvery = 120 * time.Second
 	}
 	if cfg.AdminDispatchEvery <= 0 {
-		cfg.AdminDispatchEvery = time.Minute / 60
+		cfg.AdminDispatchEvery = time.Second / 20
 	}
 	if cfg.AdminDispatchBurst <= 0 {
-		cfg.AdminDispatchBurst = 60
+		cfg.AdminDispatchBurst = 200
 	}
 	return &Limiter{buckets: map[string]*rate.Limiter{}, cfg: cfg}
 }

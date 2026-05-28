@@ -245,9 +245,9 @@ func (w *Worker) insertIncident(ctx context.Context, tx pgx.Tx, row transcriptRo
 			symbol_code, location_text, geom,
 			incident_date, received_at, last_seen_at, last_seen_poll_id
 		) VALUES (
-			$1,$2,'',$3,$4::jsonb,'',
-			'',$5,ST_SetSRID(ST_MakePoint($6,$7),4326),
-			$8,$9,$9,$10
+			$1,$2,'',$3,$4::jsonb,$5,
+			'',$6,ST_SetSRID(ST_MakePoint($7,$8),4326),
+			$9,$10,$10,$11
 		)
 		ON CONFLICT (source, incident_id) DO UPDATE SET
 			nature_code = EXCLUDED.nature_code,
@@ -263,7 +263,7 @@ func (w *Worker) insertIncident(ctx context.Context, tx pgx.Tx, row transcriptRo
 			missing_since = NULL,
 			cleared_at = NULL
 		RETURNING id`,
-		SourceName, incidentID, parsed.Nature, string(unitsJSON), parsed.LocationText, geo.Lon, geo.Lat,
+		SourceName, incidentID, parsed.Nature, string(unitsJSON), parsed.Channel, parsed.LocationText, geo.Lon, geo.Lat,
 		row.CapturedAt.UTC(), now, pollID,
 	).Scan(&incidentDBID)
 	if err != nil {

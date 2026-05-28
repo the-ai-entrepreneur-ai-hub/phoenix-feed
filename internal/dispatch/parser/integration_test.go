@@ -138,6 +138,55 @@ func TestTwoWorkersDoNotDoubleInsert(t *testing.T) {
 	}
 }
 
+func TestCleanupBadNaturesMigration(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+
+	_, err := pool.Exec(ctx, `
+		INSERT INTO incidents (source, incident_id, nature_desc, incident_date, received_at, last_seen_at)
+		VALUES
+			('sdr_audio', 'sdr-bad', 'Difficulty Breathing, 447, East Broadway Ave, Unit 2, Ladder 263, Sea Deck 4, Difficulty Breathing', $1, $1, $1),
+			('sdr_audio', 'sdr-no-comma', 'Long Nature Text Without A Comma That Should Stay Unchanged By The Cleanup', $1, $1, $1),
+			('phoenix-fire-mapserver', 'map-bad', 'Difficulty Breathing, 447, East Broadway Ave, Unit 2', $1, $1, $1)`,
+		now,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	applySQLFile(t, pool, "../../../db/migrations/0005_cleanup_bad_natures.sql")
+
+	rows, err := pool.Query(ctx, `
+		SELECT incident_id, nature_desc
+		FROM incidents
+		WHERE incident_id IN ('sdr-bad', 'sdr-no-comma', 'map-bad')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	got := map[string]string{}
+	for rows.Next() {
+		var id, nature string
+		if err := rows.Scan(&id, &nature); err != nil {
+			t.Fatal(err)
+		}
+		got[id] = nature
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if got["sdr-bad"] != "Difficulty Breathing" {
+		t.Fatalf("cleaned nature = %q, want Difficulty Breathing", got["sdr-bad"])
+	}
+	if got["sdr-no-comma"] != "Long Nature Text Without A Comma That Should Stay Unchanged By The Cleanup" {
+		t.Fatalf("no-comma nature changed to %q", got["sdr-no-comma"])
+	}
+	if got["map-bad"] != "Difficulty Breathing, 447, East Broadway Ave, Unit 2" {
+		t.Fatalf("mapserver nature changed to %q", got["map-bad"])
+	}
+}
+
 type stubGeocoder struct{}
 
 func (stubGeocoder) Geocode(context.Context, string) (geocode.Result, error) {
@@ -197,6 +246,7 @@ func openIntegrationPool(t *testing.T) *pgxpool.Pool {
 		"../../../db/schema.sql",
 		"../../../db/migrations/0003_dispatch_transcripts.sql",
 		"../../../db/migrations/0004_incidents_id_and_geocode_cache.sql",
+		"../../../db/migrations/0005_cleanup_bad_natures.sql",
 	} {
 		applySQLFile(t, pool, path)
 	}

@@ -141,6 +141,59 @@
     "want_units": [{"unit_name": "AMR 302", "unit_type": "AMR"}]
   },
   {
+    "name": "whisper cdec variant sea deck",
+    "text": "AMR 207. Sea Deck 12. Fall. 154-35 East Cabern Drive.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Fall",
+    "want_address": "154-35 East Cabern Drive",
+    "want_channel": "CDEC 12",
+    "want_units": [{"unit_name": "AMR 207", "unit_type": "AMR"}]
+  },
+  {
+    "name": "whisper cdec variant seabex",
+    "text": "AMR 207. Seabex 12. Fall. 154-35 East Cabern Drive.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Fall",
+    "want_address": "154-35 East Cabern Drive",
+    "want_channel": "CDEC 12",
+    "want_units": [{"unit_name": "AMR 207", "unit_type": "AMR"}]
+  },
+  {
+    "name": "whisper cdec variant fedex",
+    "text": "AMR 207. FedEx 12. Fall. 154-35 East Cabern Drive.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Fall",
+    "want_address": "154-35 East Cabern Drive",
+    "want_channel": "CDEC 12",
+    "want_units": [{"unit_name": "AMR 207", "unit_type": "AMR"}]
+  },
+  {
+    "name": "whisper cdec variant cdc",
+    "text": "AMR 207. CDC 12. Fall. 154-35 East Cabern Drive.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Fall",
+    "want_address": "154-35 East Cabern Drive",
+    "want_channel": "CDEC 12",
+    "want_units": [{"unit_name": "AMR 207", "unit_type": "AMR"}]
+  },
+  {
+    "name": "reordered repeated dispatch does not over capture nature",
+    "text": "AMR 207. CDEC 12. Difficulty Breathing, 447, East Broadway Ave, Unit 2, Ladder 263, Sea Deck 4, Difficulty Breathing. 447 East Broadway Ave.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Difficulty Breathing",
+    "want_address": "447 East Broadway Ave",
+    "want_channel": "CDEC 12",
+    "want_units": [
+      {"unit_name": "AMR 207", "unit_type": "AMR"},
+      {"unit_name": "Ladder 263", "unit_type": "Ladder"}
+    ]
+  },
+  {
     "name": "silence",
     "text": "",
     "confidence": 0.99,

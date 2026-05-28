@@ -14,6 +14,7 @@ type gateFixture struct {
 	WantGate    bool           `json:"want_gate"`
 	WantNature  string         `json:"want_nature"`
 	WantAddress string         `json:"want_address"`
+	WantChannel string         `json:"want_channel"`
 	WantUnits   []ExpectedUnit `json:"want_units"`
 }
 
@@ -34,6 +35,12 @@ func TestGateFixtures(t *testing.T) {
 			}
 			if got.Nature != fixture.WantNature {
 				t.Fatalf("nature = %q, want %q", got.Nature, fixture.WantNature)
+			}
+			if len(got.Nature) > 50 {
+				t.Fatalf("nature = %q length %d, want <= 50", got.Nature, len(got.Nature))
+			}
+			if fixture.WantChannel != "" && got.Channel != fixture.WantChannel {
+				t.Fatalf("channel = %q, want %q", got.Channel, fixture.WantChannel)
 			}
 			if got.LocationText != fixture.WantAddress {
 				t.Fatalf("location = %q, want %q", got.LocationText, fixture.WantAddress)

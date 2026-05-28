@@ -3,13 +3,12 @@ package dispatchparser
 import (
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 const SourceName = "sdr_audio"
 
 var (
-	cdecPattern = regexp.MustCompile(`(?i)\bCDEC[\s-]?\d+\b`)
+	cdecPattern = regexp.MustCompile(`(?i)\b(?:CDEC|Sea[\s-]?Deck|Sea[\s-]?Beck|Seabex|FedEx|CDC)[\s-]?(\d+)\b`)
 	unitPattern = regexp.MustCompile(`(?i)\b(engine|ladder|battalion|rescue|squad|truck|medic|chief|amr)[\s-]?(\d+)\b`)
 
 	addressPatterns = []*regexp.Regexp{
@@ -26,6 +25,7 @@ type ExpectedUnit struct {
 
 type ParsedDispatch struct {
 	Nature       string
+	Channel      string
 	Units        []ExpectedUnit
 	LocationText string
 }
@@ -35,7 +35,8 @@ func ParseTranscript(text string, confidence float64) (ParsedDispatch, bool, str
 	if confidence < 0.80 {
 		return ParsedDispatch{}, false, "low_confidence"
 	}
-	if !cdecPattern.MatchString(text) {
+	channel := extractCDECChannel(text)
+	if channel == "" {
 		return ParsedDispatch{}, false, "missing_cdec"
 	}
 	units := extractUnits(text)
@@ -50,7 +51,15 @@ func ParseTranscript(text string, confidence float64) (ParsedDispatch, bool, str
 	if nature == "" {
 		return ParsedDispatch{}, false, "missing_nature"
 	}
-	return ParsedDispatch{Nature: nature, Units: units, LocationText: address}, true, ""
+	return ParsedDispatch{Nature: nature, Channel: channel, Units: units, LocationText: address}, true, ""
+}
+
+func extractCDECChannel(text string) string {
+	match := cdecPattern.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return ""
+	}
+	return "CDEC " + match[1]
 }
 
 func extractUnits(text string) []ExpectedUnit {
@@ -107,20 +116,13 @@ func extractNature(prefix string) string {
 		candidate = candidate[:idx]
 	}
 	candidate = strings.Trim(candidate, " \t\r\n.,;:-")
-	return titleCase(candidate)
-}
-
-func titleCase(s string) string {
-	words := strings.Fields(strings.ToLower(s))
-	for i, word := range words {
-		runes := []rune(word)
-		if len(runes) == 0 {
-			continue
-		}
-		runes[0] = unicode.ToUpper(runes[0])
-		words[i] = string(runes)
+	if candidate == "" {
+		return ""
 	}
-	return strings.Join(words, " ")
+	if nature := matchKnownNature(candidate); nature != "" {
+		return nature
+	}
+	return "Dispatch Call"
 }
 
 func canonicalUnitType(s string) string {

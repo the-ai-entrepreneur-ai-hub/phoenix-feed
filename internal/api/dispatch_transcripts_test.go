@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abusedmindset/phoenix-feed/internal/ratelimit"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
@@ -73,6 +74,23 @@ func TestAdminDispatchTranscriptPostInsertsTranscript(t *testing.T) {
 	}
 	if !json.Valid(st.dispatchInsert.RawPayload) || !bytes.Contains(st.dispatchInsert.RawPayload, []byte(`"wav_filename"`)) {
 		t.Fatalf("raw_payload was not preserved as JSON object: %s", string(st.dispatchInsert.RawPayload))
+	}
+}
+
+func TestAdminDispatchTranscriptPostNormalizesCapturedAtToUTC(t *testing.T) {
+	st := &fakeStore{dispatchInsertID: 42}
+	req := httptest.NewRequest(http.MethodPost, "/v1/admin/dispatch/transcript", strings.NewReader(sampleDispatchTranscriptJSON("20260528_001043_unknown.wav", "2026-05-28T00:10:43-07:00")))
+	req.Header.Set("Authorization", "Bearer admin-secret")
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{AdminToken: "admin-secret", Now: func() time.Time { return time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC) }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	if got := st.dispatchInsert.CapturedAt.Format(time.RFC3339); got != "2026-05-28T07:10:43Z" {
+		t.Fatalf("captured_at = %s, want normalized UTC", got)
 	}
 }
 
@@ -165,6 +183,34 @@ func TestAdminDispatchTranscriptPostRejectsMissingRequiredFields(t *testing.T) {
 	}
 }
 
+func TestAdminDispatchTranscriptPostRejectsUnsafeFieldsAtEdge(t *testing.T) {
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name string
+		body string
+	}{
+		{name: "captured before 2024", body: sampleDispatchTranscriptJSON("20260528_001043_unknown.wav", "2023-12-31T23:59:59Z")},
+		{name: "captured too far in future", body: sampleDispatchTranscriptJSON("20260528_001043_unknown.wav", "2026-05-28T08:31:00Z")},
+		{name: "path separator", body: sampleDispatchTranscriptJSON(`20260528_001043_..\evil.wav`, "2026-05-28T07:10:43Z")},
+		{name: "dot dot", body: sampleDispatchTranscriptJSON("20260528_001043_.._evil.wav", "2026-05-28T07:10:43Z")},
+		{name: "bad extension case", body: sampleDispatchTranscriptJSON("20260528_001043_unknown.WAV", "2026-05-28T07:10:43Z")},
+		{name: "oversized display text", body: fmt.Sprintf(`{"wav_filename":"20260528_001043_unknown.wav","captured_at":"2026-05-28T07:10:43Z","display_text":%q}`, strings.Repeat("x", 16*1024+1))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/admin/dispatch/transcript", strings.NewReader(tc.body))
+			req.Header.Set("Authorization", "Bearer admin-secret")
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+
+			Router(&fakeStore{}, Config{AdminToken: "admin-secret", Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400: %s", rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
 func TestAdminDispatchTranscriptPostRejectsOversizedBody(t *testing.T) {
 	body := fmt.Sprintf(`{"wav_filename":"20260528_001043_unknown.wav","captured_at":"2026-05-28T07:10:43Z","display_text":"%s"}`, strings.Repeat("x", 257*1024))
 	req := httptest.NewRequest(http.MethodPost, "/v1/admin/dispatch/transcript", strings.NewReader(body))
@@ -204,6 +250,73 @@ func TestAdminDispatchTranscriptPostRateLimitsAfterSixtyRequestsPerToken(t *test
 
 	if rr.Code != http.StatusTooManyRequests {
 		t.Fatalf("request 61 status = %d, want 429: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestAdminDispatchTranscriptPostRateLimitBucketsArePerAdminToken(t *testing.T) {
+	limiter := ratelimit.New(ratelimit.Config{
+		AdminDispatchEvery: time.Hour,
+		AdminDispatchBurst: 1,
+	})
+	router := Router(&fakeStore{dispatchInsertID: 42}, Config{
+		AdminToken:  "admin-a,admin-b",
+		RateLimiter: limiter,
+		Now:         func() time.Time { return time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC) },
+	}, slog.Default())
+
+	for _, tc := range []struct {
+		name       string
+		token      string
+		filename   string
+		wantStatus int
+	}{
+		{name: "first token first request", token: "admin-a", filename: "20260528_001001_unknown.wav", wantStatus: http.StatusOK},
+		{name: "first token second request", token: "admin-a", filename: "20260528_001002_unknown.wav", wantStatus: http.StatusTooManyRequests},
+		{name: "second token has separate bucket", token: "admin-b", filename: "20260528_001003_unknown.wav", wantStatus: http.StatusOK},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/admin/dispatch/transcript", strings.NewReader(sampleDispatchTranscriptJSON(tc.filename, "2026-05-28T07:10:43Z")))
+			req.Header.Set("Authorization", "Bearer "+tc.token)
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+
+			router.ServeHTTP(rr, req)
+
+			if rr.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d: %s", rr.Code, tc.wantStatus, rr.Body.String())
+			}
+		})
+	}
+}
+
+func TestAdminDispatchEndpointsLogRequestStatusLatencyAndRequestID(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{}))
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/dispatch/transcripts/recent", nil)
+	req.Header.Set("Authorization", "Bearer admin-secret")
+	req.Header.Set("X-Request-ID", "req-123")
+	rr := httptest.NewRecorder()
+
+	Router(&fakeStore{}, Config{AdminToken: "admin-secret"}, logger).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var entry map[string]any
+	if err := json.Unmarshal(bytes.TrimSpace(logs.Bytes()), &entry); err != nil {
+		t.Fatalf("log json: %v\n%s", err, logs.String())
+	}
+	if entry["msg"] != "admin dispatch request" {
+		t.Fatalf("log msg = %v", entry["msg"])
+	}
+	if entry["request_id"] != "req-123" {
+		t.Fatalf("request_id = %v", entry["request_id"])
+	}
+	if entry["status"] != float64(200) {
+		t.Fatalf("status = %v", entry["status"])
+	}
+	if _, ok := entry["latency_ms"]; !ok {
+		t.Fatalf("latency_ms missing from log entry: %#v", entry)
 	}
 }
 
@@ -275,6 +388,103 @@ func TestAdminDispatchRecentTranscriptsRequiresBearerToken(t *testing.T) {
 		if rr.Code != http.StatusUnauthorized {
 			t.Fatalf("authorization %q status = %d, want 401: %s", authorization, rr.Code, rr.Body.String())
 		}
+	}
+}
+
+func TestAdminDispatchHealthEmptyTable(t *testing.T) {
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/dispatch/health", nil)
+	req.Header.Set("Authorization", "Bearer admin-secret")
+	rr := httptest.NewRecorder()
+
+	Router(&fakeStore{}, Config{AdminToken: "admin-secret", Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["status"] != "stale" {
+		t.Fatalf("status = %v, want stale", body["status"])
+	}
+	if body["last_received_at"] != nil || body["last_received_age_seconds"] != nil {
+		t.Fatalf("last received fields = %v/%v, want null/null", body["last_received_at"], body["last_received_age_seconds"])
+	}
+	if body["rows_last_hour"] != float64(0) || body["rows_last_24h"] != float64(0) {
+		t.Fatalf("row counts = %v/%v, want 0/0", body["rows_last_hour"], body["rows_last_24h"])
+	}
+}
+
+func TestAdminDispatchHealthFresh(t *testing.T) {
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+	lastReceived := now.Add(-12 * time.Second)
+	st := &fakeStore{dispatchHealth: store.DispatchTranscriptHealth{
+		LastReceivedAt:            &lastReceived,
+		RowsLastHour:              743,
+		RowsLast24h:               18234,
+		HighConfidenceLastHour:    87,
+		LowConfidenceLastHour:     656,
+		ReviewRecommendedLastHour: 423,
+	}}
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/dispatch/health", nil)
+	req.Header.Set("Authorization", "Bearer admin-secret")
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{AdminToken: "admin-secret", Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["status"] != "ok" {
+		t.Fatalf("status = %v, want ok", body["status"])
+	}
+	if body["last_received_age_seconds"] != float64(12) {
+		t.Fatalf("last_received_age_seconds = %v", body["last_received_age_seconds"])
+	}
+	if body["rows_last_hour"] != float64(743) || body["high_confidence_last_hour"] != float64(87) || body["review_recommended_last_hour"] != float64(423) {
+		t.Fatalf("health body = %#v", body)
+	}
+}
+
+func TestAdminDispatchHealthStale(t *testing.T) {
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+	lastReceived := now.Add(-601 * time.Second)
+	st := &fakeStore{dispatchHealth: store.DispatchTranscriptHealth{LastReceivedAt: &lastReceived}}
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/dispatch/health", nil)
+	req.Header.Set("Authorization", "Bearer admin-secret")
+	rr := httptest.NewRecorder()
+
+	Router(st, Config{AdminToken: "admin-secret", Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["status"] != "stale" {
+		t.Fatalf("status = %v, want stale", body["status"])
+	}
+	if body["last_received_age_seconds"] != float64(601) {
+		t.Fatalf("last_received_age_seconds = %v", body["last_received_age_seconds"])
+	}
+}
+
+func TestAdminDispatchHealthRequiresBearerToken(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/dispatch/health", nil)
+	rr := httptest.NewRecorder()
+
+	Router(&fakeStore{}, Config{AdminToken: "admin-secret"}, slog.Default()).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401: %s", rr.Code, rr.Body.String())
 	}
 }
 

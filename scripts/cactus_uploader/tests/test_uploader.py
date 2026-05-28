@@ -2,6 +2,7 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
+from zoneinfo import ZoneInfoNotFoundError
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -118,3 +119,55 @@ def test_process_once_records_duplicate_responses_locally(tmp_path, requests_moc
     assert uploaded_at is not None
     assert permanent_failure_at is None
     assert permanent_failure_status is None
+
+
+def test_default_log_path_does_not_collide_with_batch_stdout(monkeypatch):
+    monkeypatch.setenv("ADMIN_TOKEN", "secret-token")
+    monkeypatch.delenv("CACTUS_UPLOADER_LOG", raising=False)
+
+    cfg = cactus_uploader.config_from_env()
+
+    assert str(cfg.log_path) == r"C:\cactus\logs\uploader_inscript.log"
+    assert cfg.log_path != cactus_uploader.DEFAULT_STDOUT_REDIRECT_PATH
+
+
+def test_startup_self_check_warns_when_log_path_matches_stdout_redirect(tmp_path, capsys):
+    cfg = cactus_uploader.Config(
+        phoenix_feed_url="https://feed.example.test",
+        admin_token="secret-token",
+        recordings_dir=tmp_path / "recordings",
+        state_db=tmp_path / "uploaded_transcripts.sqlite3",
+        log_path=cactus_uploader.DEFAULT_STDOUT_REDIRECT_PATH,
+        poll_seconds=0.01,
+        batch_size=50,
+    )
+
+    ok = cactus_uploader.run_startup_self_checks(cfg)
+
+    captured = capsys.readouterr()
+    assert ok is True
+    assert "CACTUS_UPLOADER_LOG" in captured.err
+    assert "uploader.stdout" in captured.err
+
+
+def test_startup_self_check_reports_missing_tzdata(monkeypatch, tmp_path, capsys):
+    def missing_zoneinfo(_name):
+        raise ZoneInfoNotFoundError("missing tzdata")
+
+    monkeypatch.setattr(cactus_uploader, "ZoneInfo", missing_zoneinfo)
+    cfg = cactus_uploader.Config(
+        phoenix_feed_url="https://feed.example.test",
+        admin_token="secret-token",
+        recordings_dir=tmp_path / "recordings",
+        state_db=tmp_path / "uploaded_transcripts.sqlite3",
+        log_path=tmp_path / "uploader_inscript.log",
+        poll_seconds=0.01,
+        batch_size=50,
+    )
+
+    ok = cactus_uploader.run_startup_self_checks(cfg)
+
+    captured = capsys.readouterr()
+    assert ok is False
+    assert "tzdata" in captured.err
+    assert "python -m pip install -r requirements.txt" in captured.err

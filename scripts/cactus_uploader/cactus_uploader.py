@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 
@@ -21,7 +21,10 @@ import requests
 DEFAULT_PHOENIX_FEED_URL = "https://feed.cactuswatch.com"
 DEFAULT_RECORDINGS_DIR = r"D:\cactus\recordings"
 DEFAULT_STATE_DB = r"D:\cactus\state\uploaded_transcripts.sqlite3"
-DEFAULT_LOG_PATH = r"C:\cactus\logs\uploader.stdout"
+DEFAULT_LOG_PATH = r"C:\cactus\logs\uploader_inscript.log"
+DEFAULT_STDOUT_REDIRECT_PATH = Path(r"C:\cactus\logs\uploader.stdout")
+DEFAULT_STDERR_REDIRECT_PATH = Path(r"C:\cactus\logs\uploader.stderr")
+DEFAULT_CAPTURE_TIMEZONE = "America/Phoenix"
 DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_BATCH_SIZE = 50
 CAPTURE_RE = re.compile(r"^(\d{8}_\d{6})_")
@@ -211,13 +214,50 @@ def wav_filename_from_path(path: Path) -> str:
     return f"{path.stem}.wav"
 
 
-def captured_at_from_filename(filename: str, box_tz: str = "America/Phoenix") -> str:
+def captured_at_from_filename(filename: str, box_tz: str = DEFAULT_CAPTURE_TIMEZONE) -> str:
     match = CAPTURE_RE.match(filename)
     if not match:
         raise ValueError(f"filename does not start with YYYYMMDD_HHMMSS_: {filename}")
     local_naive = datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
-    local_time = local_naive.replace(tzinfo=ZoneInfo(box_tz))
+    try:
+        local_time = local_naive.replace(tzinfo=ZoneInfo(box_tz))
+    except ZoneInfoNotFoundError as exc:
+        raise RuntimeError(
+            f"timezone data for {box_tz} is unavailable; install tzdata with "
+            "python -m pip install -r requirements.txt"
+        ) from exc
     return local_time.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def run_startup_self_checks(cfg: Config) -> bool:
+    ok = True
+    redirect_targets = (DEFAULT_STDOUT_REDIRECT_PATH, DEFAULT_STDERR_REDIRECT_PATH)
+    for target in redirect_targets:
+        if same_path(cfg.log_path, target):
+            print(
+                "cactus_uploader warning: CACTUS_UPLOADER_LOG points at "
+                f"{target}, which run_uploader.bat also opens for redirection; "
+                "use a separate file such as C:\\cactus\\logs\\uploader_inscript.log",
+                file=sys.stderr,
+            )
+            break
+
+    try:
+        ZoneInfo(DEFAULT_CAPTURE_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        print(
+            "cactus_uploader timezone error: America/Phoenix is unavailable. "
+            "Install tzdata in the uploader virtualenv with "
+            "python -m pip install -r requirements.txt",
+            file=sys.stderr,
+        )
+        ok = False
+
+    return ok
+
+
+def same_path(left: Path, right: Path) -> bool:
+    return os.path.normcase(os.path.normpath(str(left))) == os.path.normcase(os.path.normpath(str(right)))
 
 
 def log_status(cfg: Config, wav_filename: str, status: str, message: str = "", stderr: bool = False) -> None:
@@ -241,6 +281,8 @@ def main() -> int:
         cfg = config_from_env()
     except Exception as exc:  # noqa: BLE001
         print(f"cactus_uploader config error: {exc}", file=sys.stderr)
+        return 2
+    if not run_startup_self_checks(cfg):
         return 2
 
     while True:

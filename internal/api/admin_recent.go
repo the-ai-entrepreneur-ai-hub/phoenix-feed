@@ -48,15 +48,11 @@ func adminRecentIncidentsHandler(st Store, cfg Config, log *slog.Logger) http.Ha
 }
 
 func validAdminBearer(header, configuredToken string) bool {
-	configuredToken = strings.TrimSpace(configuredToken)
-	if configuredToken == "" {
-		return false
-	}
 	token, ok := parseAdminBearerToken(header)
 	if !ok {
 		return false
 	}
-	return subtle.ConstantTimeCompare([]byte(token), []byte(configuredToken)) == 1
+	return validAdminToken(token, configuredToken)
 }
 
 func parseAdminBearerToken(header string) (string, bool) {
@@ -69,6 +65,29 @@ func parseAdminBearerToken(header string) (string, bool) {
 		return "", false
 	}
 	return token, true
+}
+
+func validAdminToken(token, configuredToken string) bool {
+	if strings.TrimSpace(token) == "" {
+		return false
+	}
+	matched := 0
+	for _, candidate := range adminTokenCandidates(configuredToken) {
+		matched |= subtle.ConstantTimeCompare([]byte(token), []byte(candidate))
+	}
+	return matched == 1
+}
+
+func adminTokenCandidates(configuredToken string) []string {
+	parts := strings.Split(configuredToken, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func parseAdminRecentHours(raw string) (int, error) {

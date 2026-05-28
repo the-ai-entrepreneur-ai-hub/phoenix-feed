@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +21,14 @@ import (
 
 const (
 	dispatchTranscriptMaxBodyBytes = 256 * 1024
+	dispatchTranscriptMaxTextBytes = 16 * 1024
 	dispatchTranscriptRecentLimit  = 50
+	dispatchTranscriptStaleSeconds = 600
+)
+
+var (
+	dispatchTranscriptMinCapturedAt = time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	dispatchWavFilenamePattern      = regexp.MustCompile(`^[A-Za-z0-9_]+\.wav$`)
 )
 
 func adminDispatchTranscriptHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
@@ -35,7 +46,7 @@ func adminDispatchTranscriptHandler(st Store, cfg Config, log *slog.Logger) http
 		if !ok {
 			return
 		}
-		input, err := dispatchTranscriptInputFromBody(body)
+		input, err := dispatchTranscriptInputFromBody(body, apiNow(cfg))
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -71,11 +82,29 @@ func adminDispatchRecentTranscriptsHandler(st Store, cfg Config, log *slog.Logge
 	}
 }
 
+func adminDispatchHealthHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !validAdminBearer(r.Header.Get("Authorization"), cfg.AdminToken) {
+			writeError(w, http.StatusUnauthorized, "invalid admin token")
+			return
+		}
+
+		now := apiNow(cfg)
+		health, err := st.DispatchTranscriptHealth(r.Context(), now)
+		if err != nil {
+			log.Error("dispatch transcript health", "err", err)
+			writeError(w, http.StatusInternalServerError, "query dispatch transcript health")
+			return
+		}
+		writeJSON(w, http.StatusOK, buildDispatchHealthResponse(health, now))
+	}
+}
+
 func adminDispatchRateLimitMiddleware(limiter *ratelimit.Limiter, configuredToken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, ok := parseAdminBearerToken(r.Header.Get("Authorization"))
-			if !ok || !validAdminBearer(r.Header.Get("Authorization"), configuredToken) {
+			if !ok || !validAdminToken(token, configuredToken) {
 				writeError(w, http.StatusUnauthorized, "invalid admin token")
 				return
 			}
@@ -91,13 +120,58 @@ func adminDispatchRateLimitMiddleware(limiter *ratelimit.Limiter, configuredToke
 			}
 			decision := limiter.Allow(identity, ratelimit.ScopeAdminDispatch)
 			if !decision.Allowed {
-				w.Header().Set("Retry-After", "1")
+				retrySeconds := int(math.Ceil(decision.RetryAfter.Seconds()))
+				if retrySeconds < 1 {
+					retrySeconds = 1
+				}
+				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds))
 				writeError(w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func adminDispatchAccessLogMiddleware(log *slog.Logger, route string) func(http.Handler) http.Handler {
+	if log == nil {
+		log = slog.Default()
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			requestID := dispatchRequestID(r)
+			w.Header().Set("X-Request-ID", requestID)
+			recorder := &dispatchStatusRecorder{ResponseWriter: w, status: http.StatusOK}
+			defer func() {
+				log.Info("admin dispatch request",
+					"request_id", requestID,
+					"method", r.Method,
+					"path", route,
+					"status", recorder.status,
+					"latency_ms", time.Since(start).Milliseconds(),
+				)
+			}()
+			next.ServeHTTP(recorder, r)
+		})
+	}
+}
+
+type dispatchStatusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *dispatchStatusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func dispatchRequestID(r *http.Request) string {
+	if requestID := strings.TrimSpace(r.Header.Get("X-Request-ID")); requestID != "" {
+		return requestID
+	}
+	return fmt.Sprintf("dispatch-%d", time.Now().UnixNano())
 }
 
 func readLimitedJSONBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
@@ -115,7 +189,7 @@ func readLimitedJSONBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) 
 	return body, true
 }
 
-func dispatchTranscriptInputFromBody(body []byte) (store.DispatchTranscriptInsert, error) {
+func dispatchTranscriptInputFromBody(body []byte, now time.Time) (store.DispatchTranscriptInsert, error) {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.UseNumber()
 	var payload map[string]any
@@ -131,6 +205,9 @@ func dispatchTranscriptInputFromBody(body []byte) (store.DispatchTranscriptInser
 	if wavFilename == "" {
 		return store.DispatchTranscriptInsert{}, errors.New("wav_filename is required")
 	}
+	if err := validateDispatchWavFilename(wavFilename); err != nil {
+		return store.DispatchTranscriptInsert{}, err
+	}
 	capturedAtRaw := strings.TrimSpace(stringField(payload, "captured_at"))
 	if capturedAtRaw == "" {
 		return store.DispatchTranscriptInsert{}, errors.New("captured_at is required")
@@ -139,17 +216,25 @@ func dispatchTranscriptInputFromBody(body []byte) (store.DispatchTranscriptInser
 	if err != nil {
 		return store.DispatchTranscriptInsert{}, errors.New("captured_at must be RFC3339")
 	}
+	capturedAt = capturedAt.UTC()
+	if err := validateDispatchCapturedAt(capturedAt, now); err != nil {
+		return store.DispatchTranscriptInsert{}, err
+	}
 
 	primary := objectField(payload, "primary")
 	secondary := objectField(payload, "secondary")
 	verification := objectField(payload, "verification")
 	domainKeywords := objectField(verification, "domain_keywords")
+	displayText := stringField(payload, "display_text")
+	if len(displayText) > dispatchTranscriptMaxTextBytes {
+		return store.DispatchTranscriptInsert{}, fmt.Errorf("display_text must be %d bytes or less", dispatchTranscriptMaxTextBytes)
+	}
 
 	return store.DispatchTranscriptInsert{
 		WavFilename:            wavFilename,
-		CapturedAt:             capturedAt.UTC(),
+		CapturedAt:             capturedAt,
 		AudioDurationSeconds:   numberField(payload, "audio_duration_s"),
-		DisplayText:            stringField(payload, "display_text"),
+		DisplayText:            displayText,
 		PrimaryText:            stringField(primary, "text"),
 		SecondaryText:          stringField(secondary, "text"),
 		PrimaryModel:           stringField(primary, "model"),
@@ -162,6 +247,67 @@ func dispatchTranscriptInputFromBody(body []byte) (store.DispatchTranscriptInser
 		DomainKeywordRatio:     numberField(domainKeywords, "ratio"),
 		RawPayload:             append(json.RawMessage(nil), body...),
 	}, nil
+}
+
+func validateDispatchWavFilename(filename string) error {
+	if strings.Contains(filename, "..") {
+		return errors.New("wav_filename must not contain ..")
+	}
+	if strings.ContainsAny(filename, `/\`) {
+		return errors.New("wav_filename must not contain path separators")
+	}
+	if !dispatchWavFilenamePattern.MatchString(filename) {
+		return errors.New("wav_filename must match ^[A-Za-z0-9_]+\\.wav$")
+	}
+	return nil
+}
+
+func validateDispatchCapturedAt(capturedAt, now time.Time) error {
+	capturedAt = capturedAt.UTC()
+	now = now.UTC()
+	if capturedAt.Before(dispatchTranscriptMinCapturedAt) {
+		return errors.New("captured_at must be on or after 2024-01-01T00:00:00Z")
+	}
+	if capturedAt.After(now.Add(30 * time.Minute)) {
+		return errors.New("captured_at must not be more than 30 minutes in the future")
+	}
+	return nil
+}
+
+type dispatchHealthResponse struct {
+	LastReceivedAt            *time.Time `json:"last_received_at"`
+	LastReceivedAgeSeconds    *int       `json:"last_received_age_seconds"`
+	RowsLastHour              int        `json:"rows_last_hour"`
+	RowsLast24h               int        `json:"rows_last_24h"`
+	HighConfidenceLastHour    int        `json:"high_confidence_last_hour"`
+	LowConfidenceLastHour     int        `json:"low_confidence_last_hour"`
+	ReviewRecommendedLastHour int        `json:"review_recommended_last_hour"`
+	Status                    string     `json:"status"`
+}
+
+func buildDispatchHealthResponse(health store.DispatchTranscriptHealth, now time.Time) dispatchHealthResponse {
+	status := "stale"
+	var age *int
+	if health.LastReceivedAt != nil {
+		seconds := int(now.UTC().Sub(health.LastReceivedAt.UTC()).Seconds())
+		if seconds < 0 {
+			seconds = 0
+		}
+		age = &seconds
+		if seconds <= dispatchTranscriptStaleSeconds {
+			status = "ok"
+		}
+	}
+	return dispatchHealthResponse{
+		LastReceivedAt:            health.LastReceivedAt,
+		LastReceivedAgeSeconds:    age,
+		RowsLastHour:              health.RowsLastHour,
+		RowsLast24h:               health.RowsLast24h,
+		HighConfidenceLastHour:    health.HighConfidenceLastHour,
+		LowConfidenceLastHour:     health.LowConfidenceLastHour,
+		ReviewRecommendedLastHour: health.ReviewRecommendedLastHour,
+		Status:                    status,
+	}
 }
 
 func isJSONContentType(contentType string) bool {

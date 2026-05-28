@@ -160,6 +160,17 @@ func openAPIDocument() map[string]any {
 					},
 				},
 			},
+			"/v1/admin/dispatch/health": map[string]any{
+				"get": map[string]any{
+					"summary": "Admin-only SDR dispatch transcript ingestion health",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Dispatch transcript freshness and volume counters",
+						},
+						"401": map[string]any{"description": "Invalid admin token"},
+					},
+				},
+			},
 			"/v1/stats": map[string]any{
 				"get": map[string]any{"summary": "Public live feed statistics"},
 			},

@@ -117,6 +117,15 @@ type DispatchTranscript struct {
 	ParsedIncidentID       *int64    `json:"parsed_incident_id"`
 }
 
+type DispatchTranscriptHealth struct {
+	LastReceivedAt            *time.Time
+	RowsLastHour              int
+	RowsLast24h               int
+	HighConfidenceLastHour    int
+	LowConfidenceLastHour     int
+	ReviewRecommendedLastHour int
+}
+
 type IncidentDetail struct {
 	Source       string       `json:"source"`
 	IncidentID   string       `json:"incident_id"`
@@ -380,32 +389,42 @@ func (s *Store) ListRecentIncidents(ctx context.Context, filter RecentIncidentFi
 	return result, nil
 }
 
-func (s *Store) InsertDispatchTranscript(ctx context.Context, input DispatchTranscriptInsert) (int64, bool, error) {
-	const q = `
-		WITH inserted AS (
-			INSERT INTO dispatch_transcripts (
-				wav_filename, captured_at, audio_duration_s, display_text,
-				primary_text, secondary_text, primary_model, secondary_model,
-				primary_avg_logprob, verification_confidence, verification_agreement,
-				review_recommended, domain_keyword_matches, domain_keyword_ratio,
-				raw_payload
-			) VALUES (
-				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb
-			)
-			ON CONFLICT (wav_filename) DO NOTHING
-			RETURNING id, FALSE AS duplicate
-		)
-		SELECT id, duplicate FROM inserted
-		UNION ALL
-		SELECT id, TRUE AS duplicate
-		FROM dispatch_transcripts
-		WHERE wav_filename = $1
-		  AND NOT EXISTS (SELECT 1 FROM inserted)
-		LIMIT 1`
+const insertDispatchTranscriptSQL = `
+	INSERT INTO dispatch_transcripts (
+		wav_filename, captured_at, audio_duration_s, display_text,
+		primary_text, secondary_text, primary_model, secondary_model,
+		primary_avg_logprob, verification_confidence, verification_agreement,
+		review_recommended, domain_keyword_matches, domain_keyword_ratio,
+		raw_payload
+	) VALUES (
+		$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb
+	)
+	ON CONFLICT (wav_filename) DO UPDATE
+	SET wav_filename = dispatch_transcripts.wav_filename
+	RETURNING id, (xmax <> 0) AS duplicate`
 
+const listRecentDispatchTranscriptsSQL = `
+	SELECT id, wav_filename, captured_at, received_at, display_text,
+	       verification_confidence::float8, review_recommended, parsed_incident_id
+	FROM dispatch_transcripts
+	ORDER BY received_at DESC
+	LIMIT $1`
+
+const dispatchTranscriptHealthSQL = `
+	SELECT
+		(SELECT received_at FROM dispatch_transcripts ORDER BY received_at DESC LIMIT 1),
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1)::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $2)::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND verification_confidence >= $3)::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND (verification_confidence IS NULL OR verification_confidence < $3))::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND review_recommended = TRUE)::int`
+
+const dispatchHighConfidenceThreshold = 0.75
+
+func (s *Store) InsertDispatchTranscript(ctx context.Context, input DispatchTranscriptInsert) (int64, bool, error) {
 	var id int64
 	var duplicate bool
-	err := s.pool.QueryRow(ctx, q,
+	err := s.pool.QueryRow(ctx, insertDispatchTranscriptSQL,
 		input.WavFilename,
 		input.CapturedAt,
 		input.AudioDurationSeconds,
@@ -433,13 +452,7 @@ func (s *Store) ListRecentDispatchTranscripts(ctx context.Context, limit int) ([
 		limit = 50
 	}
 
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, wav_filename, captured_at, received_at, display_text,
-		       verification_confidence::float8, review_recommended, parsed_incident_id
-		FROM dispatch_transcripts
-		ORDER BY received_at DESC, id DESC
-		LIMIT $1`, limit,
-	)
+	rows, err := s.pool.Query(ctx, listRecentDispatchTranscriptsSQL, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -471,6 +484,31 @@ func (s *Store) ListRecentDispatchTranscripts(ctx context.Context, limit int) ([
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+func (s *Store) DispatchTranscriptHealth(ctx context.Context, now time.Time) (DispatchTranscriptHealth, error) {
+	var health DispatchTranscriptHealth
+	var lastReceived sql.NullTime
+	err := s.pool.QueryRow(ctx, dispatchTranscriptHealthSQL,
+		now.UTC().Add(-1*time.Hour),
+		now.UTC().Add(-24*time.Hour),
+		dispatchHighConfidenceThreshold,
+	).Scan(
+		&lastReceived,
+		&health.RowsLastHour,
+		&health.RowsLast24h,
+		&health.HighConfidenceLastHour,
+		&health.LowConfidenceLastHour,
+		&health.ReviewRecommendedLastHour,
+	)
+	if err != nil {
+		return DispatchTranscriptHealth{}, err
+	}
+	if lastReceived.Valid {
+		t := lastReceived.Time.UTC()
+		health.LastReceivedAt = &t
+	}
+	return health, nil
 }
 
 func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) {

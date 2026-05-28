@@ -31,6 +31,8 @@ type fakeStore struct {
 	dispatchRecentLimit     int
 	dispatchRecent          []store.DispatchTranscript
 	dispatchRecentErr       error
+	dispatchHealth          store.DispatchTranscriptHealth
+	dispatchHealthErr       error
 
 	detailSource     string
 	detailIncidentID string
@@ -57,6 +59,10 @@ func (f *fakeStore) ListRecentIncidents(_ context.Context, filter store.RecentIn
 
 func (f *fakeStore) PublicStats(_ context.Context) (store.PublicStats, error) {
 	return f.statsResult, f.statsErr
+}
+
+func (f *fakeStore) DispatchTranscriptHealth(_ context.Context, _ time.Time) (store.DispatchTranscriptHealth, error) {
+	return f.dispatchHealth, f.dispatchHealthErr
 }
 
 func (f *fakeStore) Ping(_ context.Context) error {

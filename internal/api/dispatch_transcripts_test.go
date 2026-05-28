@@ -225,10 +225,10 @@ func TestAdminDispatchTranscriptPostRejectsOversizedBody(t *testing.T) {
 	}
 }
 
-func TestAdminDispatchTranscriptPostRateLimitsAfterSixtyRequestsPerToken(t *testing.T) {
+func TestAdminDispatchTranscriptPostRateLimitsAfterDefaultBurstPerToken(t *testing.T) {
 	router := Router(&fakeStore{dispatchInsertID: 42}, Config{AdminToken: "admin-secret"}, slog.Default())
 
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 200; i++ {
 		req := httptest.NewRequest(http.MethodPost, "/v1/admin/dispatch/transcript", strings.NewReader(sampleDispatchTranscriptJSON(fmt.Sprintf("20260528_0010%02d_unknown.wav", i), "2026-05-28T07:10:43Z")))
 		req.Header.Set("Authorization", "Bearer admin-secret")
 		req.Header.Set("Content-Type", "application/json")
@@ -249,7 +249,7 @@ func TestAdminDispatchTranscriptPostRateLimitsAfterSixtyRequestsPerToken(t *test
 	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusTooManyRequests {
-		t.Fatalf("request 61 status = %d, want 429: %s", rr.Code, rr.Body.String())
+		t.Fatalf("request 201 status = %d, want 429: %s", rr.Code, rr.Body.String())
 	}
 }
 

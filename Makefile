@@ -5,7 +5,7 @@ GO          := go
 DOCKER      := docker
 COMPOSE     := docker compose -f docker-compose.dev.yml
 
-CMDS        := ingester api canary janitor
+CMDS        := ingester api canary janitor dispatch-parser
 BIN_DIR     := bin
 
 .PHONY: help

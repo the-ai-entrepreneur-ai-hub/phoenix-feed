@@ -1,0 +1,233 @@
+[
+  {
+    "name": "canonical overdose apartment",
+    "text": "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.",
+    "confidence": 0.92,
+    "want_gate": true,
+    "want_nature": "Overdose",
+    "want_address": "2350 West Obispo Avenue",
+    "want_units": [{"unit_name": "Engine 2510", "unit_type": "Engine"}]
+  },
+  {
+    "name": "canonical fall hyphenated street number",
+    "text": "AMR 207. CDEC 12. Fall. CLF. 154-35 East Cabern Drive.",
+    "confidence": 0.91,
+    "want_gate": true,
+    "want_nature": "Fall",
+    "want_address": "154-35 East Cabern Drive",
+    "want_units": [{"unit_name": "AMR 207", "unit_type": "AMR"}]
+  },
+  {
+    "name": "canonical repeated cdec intersection",
+    "text": "Medic 257 CDEC 4, CDEC 4, cardiac problem. West Cypress Street and South Gilbert Road.",
+    "confidence": 0.88,
+    "want_gate": true,
+    "want_nature": "Cardiac Problem",
+    "want_address": "West Cypress Street and South Gilbert Road",
+    "want_units": [{"unit_name": "Medic 257", "unit_type": "Medic"}]
+  },
+  {
+    "name": "canonical engine and medic",
+    "text": "Engine 205 and Medic 210 CDEC 3 cardiac problems 925 South 35th Place.",
+    "confidence": 0.9,
+    "want_gate": true,
+    "want_nature": "Cardiac Problems",
+    "want_address": "925 South 35th Place",
+    "want_units": [
+      {"unit_name": "Engine 205", "unit_type": "Engine"},
+      {"unit_name": "Medic 210", "unit_type": "Medic"}
+    ]
+  },
+  {
+    "name": "ladder smoke investigation",
+    "text": "Ladder 12. CDEC 7. Smoke investigation. 442 North 16th Street.",
+    "confidence": 0.86,
+    "want_gate": true,
+    "want_nature": "Smoke Investigation",
+    "want_address": "442 North 16th Street",
+    "want_units": [{"unit_name": "Ladder 12", "unit_type": "Ladder"}]
+  },
+  {
+    "name": "rescue sick person abbreviated suffix",
+    "text": "Rescue 31 CDEC-6 sick person 1200 East Van Buren St.",
+    "confidence": 0.87,
+    "want_gate": true,
+    "want_nature": "Sick Person",
+    "want_address": "1200 East Van Buren St",
+    "want_units": [{"unit_name": "Rescue 31", "unit_type": "Rescue"}]
+  },
+  {
+    "name": "squad unknown trouble",
+    "text": "Squad 44 CDEC 9 unknown trouble 77 West Missouri Avenue.",
+    "confidence": 0.81,
+    "want_gate": true,
+    "want_nature": "Unknown Trouble",
+    "want_address": "77 West Missouri Avenue",
+    "want_units": [{"unit_name": "Squad 44", "unit_type": "Squad"}]
+  },
+  {
+    "name": "truck gas leak",
+    "text": "Truck 21. CDEC 2. Gas leak. 3050 North Central Avenue.",
+    "confidence": 0.95,
+    "want_gate": true,
+    "want_nature": "Gas Leak",
+    "want_address": "3050 North Central Avenue",
+    "want_units": [{"unit_name": "Truck 21", "unit_type": "Truck"}]
+  },
+  {
+    "name": "battalion house fire",
+    "text": "Battalion 3 CDEC 11 house fire 1842 South 7th Avenue.",
+    "confidence": 0.93,
+    "want_gate": true,
+    "want_nature": "House Fire",
+    "want_address": "1842 South 7th Avenue",
+    "want_units": [{"unit_name": "Battalion 3", "unit_type": "Battalion"}]
+  },
+  {
+    "name": "chief medical assignment",
+    "text": "Chief 2 CDEC 5 medical assignment 900 East Camelback Road.",
+    "confidence": 0.84,
+    "want_gate": true,
+    "want_nature": "Medical Assignment",
+    "want_address": "900 East Camelback Road",
+    "want_units": [{"unit_name": "Chief 2", "unit_type": "Chief"}]
+  },
+  {
+    "name": "multiple duplicated units dedupe",
+    "text": "Engine 201 Engine 201 and Medic 208 CDEC 1 breathing problems 1666 South 12th Street.",
+    "confidence": 0.89,
+    "want_gate": true,
+    "want_nature": "Breathing Problems",
+    "want_address": "1666 South 12th Street",
+    "want_units": [
+      {"unit_name": "Engine 201", "unit_type": "Engine"},
+      {"unit_name": "Medic 208", "unit_type": "Medic"}
+    ]
+  },
+  {
+    "name": "intersection with at",
+    "text": "Engine 18 CDEC 8 vehicle accident East Thomas Road at North 24th Street.",
+    "confidence": 0.82,
+    "want_gate": true,
+    "want_nature": "Vehicle Accident",
+    "want_address": "East Thomas Road at North 24th Street",
+    "want_units": [{"unit_name": "Engine 18", "unit_type": "Engine"}]
+  },
+  {
+    "name": "intersection with slash",
+    "text": "Medic 19 CDEC 4 assault North 7th Avenue / West Indian School Road.",
+    "confidence": 0.85,
+    "want_gate": true,
+    "want_nature": "Assault",
+    "want_address": "North 7th Avenue / West Indian School Road",
+    "want_units": [{"unit_name": "Medic 19", "unit_type": "Medic"}]
+  },
+  {
+    "name": "north ordinal without house number",
+    "text": "Engine 7 CDEC 3 check welfare North 19th Avenue.",
+    "confidence": 0.83,
+    "want_gate": true,
+    "want_nature": "Check Welfare",
+    "want_address": "North 19th Avenue",
+    "want_units": [{"unit_name": "Engine 7", "unit_type": "Engine"}]
+  },
+  {
+    "name": "abbreviated direction and suffix",
+    "text": "AMR 302 CDEC 12 overdose 6400 N 35th Ave.",
+    "confidence": 0.86,
+    "want_gate": true,
+    "want_nature": "Overdose",
+    "want_address": "6400 N 35th Ave",
+    "want_units": [{"unit_name": "AMR 302", "unit_type": "AMR"}]
+  },
+  {
+    "name": "silence",
+    "text": "",
+    "confidence": 0.99,
+    "want_gate": false
+  },
+  {
+    "name": "financial news hallucination",
+    "text": "The point spread moved by three and a half before the closing bell.",
+    "confidence": 0.95,
+    "want_gate": false
+  },
+  {
+    "name": "mid incident timer chatter",
+    "text": "31 minutes on the timer, copy the update from command.",
+    "confidence": 0.93,
+    "want_gate": false
+  },
+  {
+    "name": "low confidence clean text",
+    "text": "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue.",
+    "confidence": 0.79,
+    "want_gate": false
+  },
+  {
+    "name": "missing cdec marker",
+    "text": "Engine 2510. Overdose. 2350 West Obispo Avenue.",
+    "confidence": 0.91,
+    "want_gate": false
+  },
+  {
+    "name": "missing unit",
+    "text": "CDEC 4. Overdose. 2350 West Obispo Avenue.",
+    "confidence": 0.91,
+    "want_gate": false
+  },
+  {
+    "name": "missing address",
+    "text": "Engine 2510. CDEC 4. Overdose, respond code three.",
+    "confidence": 0.91,
+    "want_gate": false
+  },
+  {
+    "name": "police unit not allowed",
+    "text": "Adam 12 CDEC 4 suspicious person 2350 West Obispo Avenue.",
+    "confidence": 0.91,
+    "want_gate": false
+  },
+  {
+    "name": "hospital status chatter",
+    "text": "Medic 20 copies. Patient contact at 31 minutes, timer continues.",
+    "confidence": 0.88,
+    "want_gate": false
+  },
+  {
+    "name": "sports hallucination with fake cdec",
+    "text": "Engine 22 CDEC 4 the point spread 2350 West Obispo Avenue.",
+    "confidence": 0.4,
+    "want_gate": false
+  },
+  {
+    "name": "weather ad",
+    "text": "CDEC weather alert sponsored by channel twelve, north winds on Friday.",
+    "confidence": 0.9,
+    "want_gate": false
+  },
+  {
+    "name": "address only",
+    "text": "2350 West Obispo Avenue.",
+    "confidence": 0.92,
+    "want_gate": false
+  },
+  {
+    "name": "unit and cdec no nature",
+    "text": "Engine 2510 CDEC 4 2350 West Obispo Avenue.",
+    "confidence": 0.92,
+    "want_gate": false
+  },
+  {
+    "name": "unit and address no cdec",
+    "text": "Medic 257 cardiac problem West Cypress Street and South Gilbert Road.",
+    "confidence": 0.92,
+    "want_gate": false
+  },
+  {
+    "name": "confidence missing equivalent zero",
+    "text": "Engine 205 CDEC 3 cardiac problems 925 South 35th Place.",
+    "confidence": 0,
+    "want_gate": false
+  }
+]

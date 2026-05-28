@@ -118,12 +118,17 @@ type DispatchTranscript struct {
 }
 
 type DispatchTranscriptHealth struct {
-	LastReceivedAt            *time.Time
-	RowsLastHour              int
-	RowsLast24h               int
-	HighConfidenceLastHour    int
-	LowConfidenceLastHour     int
-	ReviewRecommendedLastHour int
+	LastReceivedAt                  *time.Time
+	RowsLastHour                    int
+	RowsLast24h                     int
+	HighConfidenceLastHour          int
+	LowConfidenceLastHour           int
+	ReviewRecommendedLastHour       int
+	ParserLastBatchAt               *time.Time
+	ParserRowsPromotedLastHour      int
+	ParserRowsGateFailedLastHour    int
+	ParserRowsGeocodeFailedLastHour int
+	ParserBacklogUnparsed           int
 }
 
 type IncidentDetail struct {
@@ -217,6 +222,10 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 		return nil, fmt.Errorf("pgx ping: %w", err)
 	}
 	return &Store{pool: pool}, nil
+}
+
+func NewWithPool(pool *pgxpool.Pool) *Store {
+	return &Store{pool: pool}
 }
 
 func (s *Store) Close() { s.pool.Close() }
@@ -417,7 +426,22 @@ const dispatchTranscriptHealthSQL = `
 		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $2)::int,
 		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND verification_confidence >= $3)::int,
 		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND (verification_confidence IS NULL OR verification_confidence < $3))::int,
-		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND review_recommended = TRUE)::int`
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE received_at >= $1 AND review_recommended = TRUE)::int,
+		(SELECT parsed_at FROM dispatch_transcripts WHERE parsed_at IS NOT NULL ORDER BY parsed_at DESC LIMIT 1),
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE parsed_at >= $1 AND parsed_incident_id IS NOT NULL)::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE parsed_at >= $1 AND parsed_incident_id IS NULL AND NOT (` + dispatchTranscriptGateSQL + `))::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE parsed_at >= $1 AND parsed_incident_id IS NULL AND (` + dispatchTranscriptGateSQL + `))::int,
+		(SELECT COUNT(*) FROM dispatch_transcripts WHERE parsed_at IS NULL)::int`
+
+const dispatchTranscriptGateSQL = `
+	verification_confidence >= 0.80
+	AND display_text ~* '(^|[^[:alnum:]_])CDEC[[:space:]-]?[0-9]+([^[:alnum:]_]|$)'
+	AND display_text ~* '(^|[^[:alnum:]_])(engine|ladder|battalion|rescue|squad|truck|medic|chief|amr)[[:space:]-]?[0-9]+([^[:alnum:]_]|$)'
+	AND (
+		display_text ~* '(^|[^[:alnum:]_])[0-9]+(-[0-9]+)?[[:space:]]+(north|south|east|west|n|s|e|w)[[:space:]]+[a-z0-9]+([[:space:]-]+[a-z0-9]+){0,5}[[:space:]]+(avenue|street|road|drive|place|boulevard|way|court|lane|ave|st|rd|dr|pl|blvd)([^[:alnum:]_]|$)'
+		OR display_text ~* '(^|[^[:alnum:]_])(north|south|east|west|n|s|e|w)[[:space:]]+[a-z0-9]+([[:space:]-]+[a-z0-9]+){0,5}[[:space:]]+(avenue|street|road|drive|place|boulevard|way|court|lane|ave|st|rd|dr|pl|blvd)[[:space:]]+(and|at|/)[[:space:]]+(north|south|east|west|n|s|e|w)[[:space:]]+[a-z0-9]+([[:space:]-]+[a-z0-9]+){0,5}[[:space:]]+(avenue|street|road|drive|place|boulevard|way|court|lane|ave|st|rd|dr|pl|blvd)([^[:alnum:]_]|$)'
+		OR display_text ~* '(^|[^[:alnum:]_])(north|south|east|west|n|s|e|w)[[:space:]]+[0-9]+[a-z]{0,2}[[:space:]]+(avenue|street|road|drive|place|boulevard|way|court|lane|ave|st|rd|dr|pl|blvd)([^[:alnum:]_]|$)'
+	)`
 
 const dispatchHighConfidenceThreshold = 0.75
 
@@ -489,6 +513,7 @@ func (s *Store) ListRecentDispatchTranscripts(ctx context.Context, limit int) ([
 func (s *Store) DispatchTranscriptHealth(ctx context.Context, now time.Time) (DispatchTranscriptHealth, error) {
 	var health DispatchTranscriptHealth
 	var lastReceived sql.NullTime
+	var parserLastBatch sql.NullTime
 	err := s.pool.QueryRow(ctx, dispatchTranscriptHealthSQL,
 		now.UTC().Add(-1*time.Hour),
 		now.UTC().Add(-24*time.Hour),
@@ -500,6 +525,11 @@ func (s *Store) DispatchTranscriptHealth(ctx context.Context, now time.Time) (Di
 		&health.HighConfidenceLastHour,
 		&health.LowConfidenceLastHour,
 		&health.ReviewRecommendedLastHour,
+		&parserLastBatch,
+		&health.ParserRowsPromotedLastHour,
+		&health.ParserRowsGateFailedLastHour,
+		&health.ParserRowsGeocodeFailedLastHour,
+		&health.ParserBacklogUnparsed,
 	)
 	if err != nil {
 		return DispatchTranscriptHealth{}, err
@@ -507,6 +537,10 @@ func (s *Store) DispatchTranscriptHealth(ctx context.Context, now time.Time) (Di
 	if lastReceived.Valid {
 		t := lastReceived.Time.UTC()
 		health.LastReceivedAt = &t
+	}
+	if parserLastBatch.Valid {
+		t := parserLastBatch.Time.UTC()
+		health.ParserLastBatchAt = &t
 	}
 	return health, nil
 }

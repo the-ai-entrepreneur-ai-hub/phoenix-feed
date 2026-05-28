@@ -275,14 +275,19 @@ func validateDispatchCapturedAt(capturedAt, now time.Time) error {
 }
 
 type dispatchHealthResponse struct {
-	LastReceivedAt            *time.Time `json:"last_received_at"`
-	LastReceivedAgeSeconds    *int       `json:"last_received_age_seconds"`
-	RowsLastHour              int        `json:"rows_last_hour"`
-	RowsLast24h               int        `json:"rows_last_24h"`
-	HighConfidenceLastHour    int        `json:"high_confidence_last_hour"`
-	LowConfidenceLastHour     int        `json:"low_confidence_last_hour"`
-	ReviewRecommendedLastHour int        `json:"review_recommended_last_hour"`
-	Status                    string     `json:"status"`
+	LastReceivedAt                  *time.Time `json:"last_received_at"`
+	LastReceivedAgeSeconds          *int       `json:"last_received_age_seconds"`
+	RowsLastHour                    int        `json:"rows_last_hour"`
+	RowsLast24h                     int        `json:"rows_last_24h"`
+	HighConfidenceLastHour          int        `json:"high_confidence_last_hour"`
+	LowConfidenceLastHour           int        `json:"low_confidence_last_hour"`
+	ReviewRecommendedLastHour       int        `json:"review_recommended_last_hour"`
+	ParserLastBatchAt               *time.Time `json:"parser_last_batch_at"`
+	ParserRowsPromotedLastHour      int        `json:"parser_rows_promoted_last_hour"`
+	ParserRowsGateFailedLastHour    int        `json:"parser_rows_gate_failed_last_hour"`
+	ParserRowsGeocodeFailedLastHour int        `json:"parser_rows_geocode_failed_last_hour"`
+	ParserBacklogUnparsed           int        `json:"parser_backlog_unparsed"`
+	Status                          string     `json:"status"`
 }
 
 func buildDispatchHealthResponse(health store.DispatchTranscriptHealth, now time.Time) dispatchHealthResponse {
@@ -299,14 +304,19 @@ func buildDispatchHealthResponse(health store.DispatchTranscriptHealth, now time
 		}
 	}
 	return dispatchHealthResponse{
-		LastReceivedAt:            health.LastReceivedAt,
-		LastReceivedAgeSeconds:    age,
-		RowsLastHour:              health.RowsLastHour,
-		RowsLast24h:               health.RowsLast24h,
-		HighConfidenceLastHour:    health.HighConfidenceLastHour,
-		LowConfidenceLastHour:     health.LowConfidenceLastHour,
-		ReviewRecommendedLastHour: health.ReviewRecommendedLastHour,
-		Status:                    status,
+		LastReceivedAt:                  health.LastReceivedAt,
+		LastReceivedAgeSeconds:          age,
+		RowsLastHour:                    health.RowsLastHour,
+		RowsLast24h:                     health.RowsLast24h,
+		HighConfidenceLastHour:          health.HighConfidenceLastHour,
+		LowConfidenceLastHour:           health.LowConfidenceLastHour,
+		ReviewRecommendedLastHour:       health.ReviewRecommendedLastHour,
+		ParserLastBatchAt:               health.ParserLastBatchAt,
+		ParserRowsPromotedLastHour:      health.ParserRowsPromotedLastHour,
+		ParserRowsGateFailedLastHour:    health.ParserRowsGateFailedLastHour,
+		ParserRowsGeocodeFailedLastHour: health.ParserRowsGeocodeFailedLastHour,
+		ParserBacklogUnparsed:           health.ParserBacklogUnparsed,
+		Status:                          status,
 	}
 }
 

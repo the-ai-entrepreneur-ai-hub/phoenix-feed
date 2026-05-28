@@ -116,6 +116,50 @@ func openAPIDocument() map[string]any {
 					},
 				},
 			},
+			"/v1/admin/dispatch/transcript": map[string]any{
+				"post": map[string]any{
+					"summary": "Admin-only SDR dispatch transcript upload",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{
+									"type": "object",
+									"required": []string{
+										"wav_filename",
+										"captured_at",
+									},
+									"additionalProperties": true,
+									"properties": map[string]any{
+										"wav_filename": map[string]string{"type": "string"},
+										"captured_at":  map[string]string{"type": "string", "format": "date-time"},
+									},
+								},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Transcript accepted or already present",
+						},
+						"400": map[string]any{"description": "Malformed request"},
+						"401": map[string]any{"description": "Invalid admin token"},
+						"413": map[string]any{"description": "Body exceeds 256 KiB"},
+						"429": map[string]any{"description": "Upload rate limit exceeded"},
+					},
+				},
+			},
+			"/v1/admin/dispatch/transcripts/recent": map[string]any{
+				"get": map[string]any{
+					"summary": "Admin-only recent SDR dispatch transcripts",
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "Newest 50 dispatch transcripts",
+						},
+						"401": map[string]any{"description": "Invalid admin token"},
+					},
+				},
+			},
 			"/v1/stats": map[string]any{
 				"get": map[string]any{"summary": "Public live feed statistics"},
 			},

@@ -137,7 +137,7 @@ func TestOpenAPIEndpointDocumentsRoutes(t *testing.T) {
 		t.Fatalf("openapi = %v", body["openapi"])
 	}
 	paths := body["paths"].(map[string]any)
-	for _, path := range []string{"/", "/api/admin/incidents/recent", "/v1/incidents/active", "/v1/fire-stations", "/v1/stats", "/v1/codes", "/v1/openapi.json", "/v1/health"} {
+	for _, path := range []string{"/", "/api/admin/incidents/recent", "/v1/admin/dispatch/transcript", "/v1/admin/dispatch/transcripts/recent", "/v1/incidents/active", "/v1/fire-stations", "/v1/stats", "/v1/codes", "/v1/openapi.json", "/v1/health"} {
 		if _, ok := paths[path]; !ok {
 			t.Fatalf("path %s missing from openapi", path)
 		}

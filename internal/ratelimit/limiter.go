@@ -16,12 +16,15 @@ type Scope string
 const (
 	ScopeIncidentRead  Scope = "incident_read"
 	ScopeManualRefresh Scope = "manual_refresh"
+	ScopeAdminDispatch Scope = "admin_dispatch"
 )
 
 type Config struct {
-	FreeEvery   time.Duration
-	PaidEvery   time.Duration
-	ManualEvery time.Duration
+	FreeEvery          time.Duration
+	PaidEvery          time.Duration
+	ManualEvery        time.Duration
+	AdminDispatchEvery time.Duration
+	AdminDispatchBurst int
 }
 
 type Decision struct {
@@ -46,6 +49,12 @@ func New(cfg Config) *Limiter {
 	if cfg.ManualEvery <= 0 {
 		cfg.ManualEvery = 120 * time.Second
 	}
+	if cfg.AdminDispatchEvery <= 0 {
+		cfg.AdminDispatchEvery = time.Minute / 60
+	}
+	if cfg.AdminDispatchBurst <= 0 {
+		cfg.AdminDispatchBurst = 60
+	}
 	return &Limiter{buckets: map[string]*rate.Limiter{}, cfg: cfg}
 }
 
@@ -54,13 +63,13 @@ func NewDefault() *Limiter {
 }
 
 func (l *Limiter) Allow(identity auth.Identity, scope Scope) Decision {
-	every := l.refreshEvery(identity, scope)
+	every, burst := l.settings(identity, scope)
 	key := bucketKey(identity, scope)
 
 	l.mu.Lock()
 	bucket, ok := l.buckets[key]
 	if !ok {
-		bucket = rate.NewLimiter(rate.Every(every), 1)
+		bucket = rate.NewLimiter(rate.Every(every), burst)
 		l.buckets[key] = bucket
 	}
 	l.mu.Unlock()
@@ -76,13 +85,21 @@ func (l *Limiter) RefreshEvery(identity auth.Identity, scope Scope) time.Duratio
 }
 
 func (l *Limiter) refreshEvery(identity auth.Identity, scope Scope) time.Duration {
+	every, _ := l.settings(identity, scope)
+	return every
+}
+
+func (l *Limiter) settings(identity auth.Identity, scope Scope) (time.Duration, int) {
+	if scope == ScopeAdminDispatch {
+		return l.cfg.AdminDispatchEvery, l.cfg.AdminDispatchBurst
+	}
 	if scope == ScopeManualRefresh {
-		return l.cfg.ManualEvery
+		return l.cfg.ManualEvery, 1
 	}
 	if identity.Tier == auth.TierPaid {
-		return l.cfg.PaidEvery
+		return l.cfg.PaidEvery, 1
 	}
-	return l.cfg.FreeEvery
+	return l.cfg.FreeEvery, 1
 }
 
 func bucketKey(identity auth.Identity, scope Scope) string {

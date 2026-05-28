@@ -24,6 +24,14 @@ type fakeStore struct {
 	statsResult  store.PublicStats
 	statsErr     error
 
+	dispatchInsert          store.DispatchTranscriptInsert
+	dispatchInsertID        int64
+	dispatchInsertDuplicate bool
+	dispatchInsertErr       error
+	dispatchRecentLimit     int
+	dispatchRecent          []store.DispatchTranscript
+	dispatchRecentErr       error
+
 	detailSource     string
 	detailIncidentID string
 	detailResult     store.IncidentDetailResult

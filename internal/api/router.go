@@ -16,8 +16,10 @@ import (
 // Store is the database surface needed by the API handlers.
 type Store interface {
 	GetIncidentDetail(context.Context, string, string) (store.IncidentDetailResult, error)
+	InsertDispatchTranscript(context.Context, store.DispatchTranscriptInsert) (int64, bool, error)
 	ListActiveIncidents(context.Context, store.ActiveIncidentFilter) (store.ActiveIncidentsResult, error)
 	ListRecentIncidents(context.Context, store.RecentIncidentFilter) (store.RecentIncidentsResult, error)
+	ListRecentDispatchTranscripts(context.Context, int) ([]store.DispatchTranscript, error)
 	LookupAPIKey(context.Context, string) (store.APIKey, error)
 	Ping(context.Context) error
 	PublicStats(context.Context) (store.PublicStats, error)
@@ -61,6 +63,8 @@ func RegisterRoutes(r chi.Router, st Store, cfg Config, log *slog.Logger) {
 
 	r.Get("/", rootHandler())
 	r.Get("/api/admin/incidents/recent", adminRecentIncidentsHandler(st, cfg, log))
+	r.With(adminDispatchRateLimitMiddleware(limiter, cfg.AdminToken)).Post("/v1/admin/dispatch/transcript", adminDispatchTranscriptHandler(st, cfg, log))
+	r.Get("/v1/admin/dispatch/transcripts/recent", adminDispatchRecentTranscriptsHandler(st, cfg, log))
 	r.Get("/v1/incidents/active", activeIncidentsHandler(st, cfg, log))
 	r.Get("/v1/fire-stations", fireStationsHandler(cfg, log))
 	r.With(rateLimitMiddleware(limiter, ratelimit.ScopeManualRefresh)).Post("/v1/incidents/refresh", refreshIncidentsHandler(st, cfg, log))

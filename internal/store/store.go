@@ -88,6 +88,35 @@ type RecentIncidentsResult struct {
 	Incidents  []ActiveIncident
 }
 
+type DispatchTranscriptInsert struct {
+	WavFilename            string
+	CapturedAt             time.Time
+	AudioDurationSeconds   *float64
+	DisplayText            string
+	PrimaryText            string
+	SecondaryText          string
+	PrimaryModel           string
+	SecondaryModel         string
+	PrimaryAvgLogprob      *float64
+	VerificationConfidence *float64
+	VerificationAgreement  *float64
+	ReviewRecommended      bool
+	DomainKeywordMatches   []string
+	DomainKeywordRatio     *float64
+	RawPayload             json.RawMessage
+}
+
+type DispatchTranscript struct {
+	ID                     int64     `json:"id"`
+	WavFilename            string    `json:"wav_filename"`
+	CapturedAt             time.Time `json:"captured_at"`
+	ReceivedAt             time.Time `json:"received_at"`
+	DisplayText            string    `json:"display_text"`
+	VerificationConfidence *float64  `json:"verification_confidence"`
+	ReviewRecommended      bool      `json:"review_recommended"`
+	ParsedIncidentID       *int64    `json:"parsed_incident_id"`
+}
+
 type IncidentDetail struct {
 	Source       string       `json:"source"`
 	IncidentID   string       `json:"incident_id"`
@@ -351,6 +380,99 @@ func (s *Store) ListRecentIncidents(ctx context.Context, filter RecentIncidentFi
 	return result, nil
 }
 
+func (s *Store) InsertDispatchTranscript(ctx context.Context, input DispatchTranscriptInsert) (int64, bool, error) {
+	const q = `
+		WITH inserted AS (
+			INSERT INTO dispatch_transcripts (
+				wav_filename, captured_at, audio_duration_s, display_text,
+				primary_text, secondary_text, primary_model, secondary_model,
+				primary_avg_logprob, verification_confidence, verification_agreement,
+				review_recommended, domain_keyword_matches, domain_keyword_ratio,
+				raw_payload
+			) VALUES (
+				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb
+			)
+			ON CONFLICT (wav_filename) DO NOTHING
+			RETURNING id, FALSE AS duplicate
+		)
+		SELECT id, duplicate FROM inserted
+		UNION ALL
+		SELECT id, TRUE AS duplicate
+		FROM dispatch_transcripts
+		WHERE wav_filename = $1
+		  AND NOT EXISTS (SELECT 1 FROM inserted)
+		LIMIT 1`
+
+	var id int64
+	var duplicate bool
+	err := s.pool.QueryRow(ctx, q,
+		input.WavFilename,
+		input.CapturedAt,
+		input.AudioDurationSeconds,
+		input.DisplayText,
+		nullableString(input.PrimaryText),
+		nullableString(input.SecondaryText),
+		nullableString(input.PrimaryModel),
+		nullableString(input.SecondaryModel),
+		input.PrimaryAvgLogprob,
+		input.VerificationConfidence,
+		input.VerificationAgreement,
+		input.ReviewRecommended,
+		input.DomainKeywordMatches,
+		input.DomainKeywordRatio,
+		string(input.RawPayload),
+	).Scan(&id, &duplicate)
+	if err != nil {
+		return 0, false, err
+	}
+	return id, duplicate, nil
+}
+
+func (s *Store) ListRecentDispatchTranscripts(ctx context.Context, limit int) ([]DispatchTranscript, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, wav_filename, captured_at, received_at, display_text,
+		       verification_confidence::float8, review_recommended, parsed_incident_id
+		FROM dispatch_transcripts
+		ORDER BY received_at DESC, id DESC
+		LIMIT $1`, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []DispatchTranscript{}
+	for rows.Next() {
+		var row DispatchTranscript
+		var confidence sql.NullFloat64
+		var parsedID sql.NullInt64
+		if err := rows.Scan(
+			&row.ID,
+			&row.WavFilename,
+			&row.CapturedAt,
+			&row.ReceivedAt,
+			&row.DisplayText,
+			&confidence,
+			&row.ReviewRecommended,
+			&parsedID,
+		); err != nil {
+			return nil, err
+		}
+		if confidence.Valid {
+			row.VerificationConfidence = &confidence.Float64
+		}
+		if parsedID.Valid {
+			row.ParsedIncidentID = &parsedID.Int64
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) {
 	const q = `
 		SELECT started_at, parser_version FROM source_polls
@@ -371,6 +493,13 @@ func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) 
 		DataAgeSeconds:      &age,
 		ParserVersion:       parserVersion,
 	}, nil
+}
+
+func nullableString(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }
 
 // GetIncidentDetail returns one incident with observed unit and event history.

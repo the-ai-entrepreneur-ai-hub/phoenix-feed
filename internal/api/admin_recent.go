@@ -52,15 +52,23 @@ func validAdminBearer(header, configuredToken string) bool {
 	if configuredToken == "" {
 		return false
 	}
-	const prefix = "Bearer "
-	if !strings.HasPrefix(header, prefix) {
-		return false
-	}
-	token := strings.TrimSpace(strings.TrimPrefix(header, prefix))
-	if token == "" {
+	token, ok := parseAdminBearerToken(header)
+	if !ok {
 		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(token), []byte(configuredToken)) == 1
+}
+
+func parseAdminBearerToken(header string) (string, bool) {
+	const prefix = "Bearer "
+	if !strings.HasPrefix(header, prefix) {
+		return "", false
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(header, prefix))
+	if token == "" {
+		return "", false
+	}
+	return token, true
 }
 
 func parseAdminRecentHours(raw string) (int, error) {

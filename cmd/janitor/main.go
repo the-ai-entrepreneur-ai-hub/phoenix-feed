@@ -14,7 +14,10 @@ import (
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
-const sweepInterval = 6 * time.Hour
+const (
+	rawSweepInterval = 6 * time.Hour
+	sdrSweepInterval = time.Minute
+)
 
 func main() {
 	cfg, err := config.Load()
@@ -32,23 +35,34 @@ func main() {
 	}
 	defer st.Close()
 
-	log.Info("janitor starting", "raw_retention", cfg.RawRetention, "interval", sweepInterval)
+	log.Info("janitor starting",
+		"raw_retention", cfg.RawRetention,
+		"raw_interval", rawSweepInterval,
+		"sdr_active_window", cfg.SDRActiveWindow,
+		"sdr_interval", sdrSweepInterval,
+	)
 
-	tick := time.NewTicker(sweepInterval)
-	defer tick.Stop()
+	runSDRSweep(ctx, st, cfg, log)
+
+	rawTick := time.NewTicker(rawSweepInterval)
+	defer rawTick.Stop()
+	sdrTick := time.NewTicker(sdrSweepInterval)
+	defer sdrTick.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("janitor shutting down")
 			return
-		case <-tick.C:
-			runSweep(ctx, st, cfg, log)
+		case <-rawTick.C:
+			runRawSweep(ctx, st, cfg, log)
+		case <-sdrTick.C:
+			runSDRSweep(ctx, st, cfg, log)
 		}
 	}
 }
 
-func runSweep(ctx context.Context, st *store.Store, cfg config.Config, log *slog.Logger) {
+func runRawSweep(ctx context.Context, st *store.Store, cfg config.Config, log *slog.Logger) {
 	sweepCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -63,6 +77,19 @@ func runSweep(ctx context.Context, st *store.Store, cfg config.Config, log *slog
 		return
 	}
 	log.Info("janitor sweep", "raw_rows_dropped", dropped, "raw_retention", cfg.RawRetention)
+}
+
+func runSDRSweep(ctx context.Context, st *store.Store, cfg config.Config, log *slog.Logger) {
+	sweepCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	now := time.Now().UTC()
+	cleared, err := st.ClearStaleSDRAudioIncidents(sweepCtx, now, cfg.SDRActiveWindow)
+	if err != nil {
+		log.Error("clear stale sdr incidents", "err", err)
+		return
+	}
+	log.Info("janitor sdr sweep", "sdr_rows_cleared", cleared, "sdr_active_window", cfg.SDRActiveWindow)
 }
 
 func fatal(msg string, err error) {

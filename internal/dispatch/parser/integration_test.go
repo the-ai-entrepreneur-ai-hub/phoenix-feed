@@ -59,6 +59,68 @@ func TestProcessBatchPromotesOnlyCanonicalRows(t *testing.T) {
 	}
 }
 
+func TestProcessBatchRejectsStaleCapture(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	capturedAt := fixedNow().Add(-3 * time.Hour)
+	insertTranscript(t, pool, "stale_engine_2510.wav", capturedAt, "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.", 0.92)
+
+	worker := NewWorker(pool, stubGeocoder{}, slog.Default(), WorkerOptions{Now: fixedNow})
+	stats, err := worker.ProcessBatch(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if stats.BatchSize != 1 || stats.GateFailCount != 1 || stats.StaleCaptureCount != 1 || stats.IncidentsInserted != 0 {
+		t.Fatalf("stats = %+v", stats)
+	}
+	var parsedAt *time.Time
+	var parsedIncidentID *int64
+	if err := pool.QueryRow(ctx, `
+		SELECT parsed_at, parsed_incident_id
+		FROM dispatch_transcripts
+		WHERE wav_filename = 'stale_engine_2510.wav'`).Scan(&parsedAt, &parsedIncidentID); err != nil {
+		t.Fatal(err)
+	}
+	if parsedAt == nil {
+		t.Fatal("parsed_at is nil, want stale transcript consumed")
+	}
+	if parsedIncidentID != nil {
+		t.Fatalf("parsed_incident_id = %d, want nil", *parsedIncidentID)
+	}
+	var incidentCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM incidents WHERE source = 'sdr_audio'`).Scan(&incidentCount); err != nil {
+		t.Fatal(err)
+	}
+	if incidentCount != 0 {
+		t.Fatalf("incident count = %d, want 0", incidentCount)
+	}
+}
+
+func TestProcessBatchPromotesFreshCapture(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	capturedAt := fixedNow().Add(-10 * time.Minute)
+	insertTranscript(t, pool, "fresh_engine_2510.wav", capturedAt, "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.", 0.92)
+
+	worker := NewWorker(pool, stubGeocoder{}, slog.Default(), WorkerOptions{Now: fixedNow})
+	stats, err := worker.ProcessBatch(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if stats.BatchSize != 1 || stats.GatePassCount != 1 || stats.StaleCaptureCount != 0 || stats.IncidentsInserted != 1 {
+		t.Fatalf("stats = %+v", stats)
+	}
+	var incidentCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM incidents WHERE source = 'sdr_audio' AND cleared_at IS NULL`).Scan(&incidentCount); err != nil {
+		t.Fatal(err)
+	}
+	if incidentCount != 1 {
+		t.Fatalf("active incident count = %d, want 1", incidentCount)
+	}
+}
+
 func TestProcessBatchSurfacesSDRIncidentFromActiveEndpoint(t *testing.T) {
 	pool := openIntegrationPool(t)
 	ctx := context.Background()
@@ -247,6 +309,7 @@ func openIntegrationPool(t *testing.T) *pgxpool.Pool {
 		"../../../db/migrations/0003_dispatch_transcripts.sql",
 		"../../../db/migrations/0004_incidents_id_and_geocode_cache.sql",
 		"../../../db/migrations/0005_cleanup_bad_natures.sql",
+		"../../../db/migrations/0006_clear_stale_sdr_audio_incidents.sql",
 	} {
 		applySQLFile(t, pool, path)
 	}

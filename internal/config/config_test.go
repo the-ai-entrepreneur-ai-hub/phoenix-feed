@@ -1,6 +1,61 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
+
+func TestLoadDispatchMaxAgeDefaultsTwoHours(t *testing.T) {
+	t.Setenv("DISPATCH_MAX_AGE", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.DispatchMaxAge != 2*time.Hour {
+		t.Fatalf("DispatchMaxAge = %s, want 2h", cfg.DispatchMaxAge)
+	}
+}
+
+func TestLoadDispatchMaxAgeFromEnv(t *testing.T) {
+	t.Setenv("DISPATCH_MAX_AGE", "45m")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.DispatchMaxAge != 45*time.Minute {
+		t.Fatalf("DispatchMaxAge = %s, want 45m", cfg.DispatchMaxAge)
+	}
+}
+
+func TestLoadSDRActiveWindowDefaultsNinetyMinutes(t *testing.T) {
+	t.Setenv("SDR_ACTIVE_WINDOW", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.SDRActiveWindow != 90*time.Minute {
+		t.Fatalf("SDRActiveWindow = %s, want 90m", cfg.SDRActiveWindow)
+	}
+}
+
+func TestLoadSDRActiveWindowFromEnv(t *testing.T) {
+	t.Setenv("SDR_ACTIVE_WINDOW", "2h")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.SDRActiveWindow != 2*time.Hour {
+		t.Fatalf("SDRActiveWindow = %s, want 2h", cfg.SDRActiveWindow)
+	}
+}
 
 func TestLoadPaidTierDefaultsFalse(t *testing.T) {
 	t.Setenv("PAID_TIER_ENABLED", "")

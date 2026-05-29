@@ -1,0 +1,8 @@
+- [x] Add config fields and defaults for `DISPATCH_MAX_AGE=2h` and `SDR_ACTIVE_WINDOW=90m`.
+- [x] Add parser stale-capture tests for 3-hour-old rejection and 10-minute-old promotion.
+- [x] Add parser stale gate that marks stale transcripts parsed without incident promotion and logs/counts `stale_capture`.
+- [x] Add store/janitor SDR active-window sweep tests for old rows cleared and fresh rows retained.
+- [x] Implement SDR-only janitor clearing with a short dedicated sweep interval.
+- [x] Add active view coverage proving cleared SDR rows are excluded.
+- [x] Add idempotent one-shot cleanup migration and migration test.
+- [x] Run `go test ./...`, `go vet ./...`, `go build ./...`, and `openspec validate sdr-active-window --strict`.

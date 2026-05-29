@@ -32,6 +32,27 @@ func (s *Store) DropRawOlderThan(ctx context.Context, now time.Time, retention t
 	return tag.RowsAffected(), nil
 }
 
+// ClearStaleSDRAudioIncidents clears momentary SDR incidents after their
+// configured active window has elapsed.
+func (s *Store) ClearStaleSDRAudioIncidents(ctx context.Context, now time.Time, activeWindow time.Duration) (int64, error) {
+	if activeWindow <= 0 {
+		return 0, fmt.Errorf("clear stale SDR incidents: active window must be positive")
+	}
+	now = now.UTC()
+	cutoff := now.Add(-activeWindow)
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE incidents
+		SET cleared_at = $1
+		WHERE source = 'sdr_audio'
+		  AND cleared_at IS NULL
+		  AND incident_date < $2`, now, cutoff,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("clear stale SDR incidents older than %s: %w", cutoff.Format(time.RFC3339), err)
+	}
+	return tag.RowsAffected(), nil
+}
+
 // VacuumAnalyzeIncidents refreshes storage statistics after retention sweeps.
 func (s *Store) VacuumAnalyzeIncidents(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, `VACUUM ANALYZE incidents`); err != nil {

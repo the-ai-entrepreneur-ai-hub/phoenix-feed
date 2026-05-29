@@ -17,6 +17,11 @@ import (
 
 const ParserVersion = "sdr-audio-fallback-phase2"
 
+const (
+	defaultDispatchMaxAge = 2 * time.Hour
+	staleCaptureReason    = "stale_capture"
+)
+
 type Geocoder interface {
 	Geocode(context.Context, string) (geocode.Result, error)
 }
@@ -26,16 +31,19 @@ type Worker struct {
 	geocoder Geocoder
 	log      *slog.Logger
 	now      func() time.Time
+	maxAge   time.Duration
 }
 
 type WorkerOptions struct {
-	Now func() time.Time
+	Now    func() time.Time
+	MaxAge time.Duration
 }
 
 type BatchStats struct {
 	BatchSize               int
 	GatePassCount           int
 	GateFailCount           int
+	StaleCaptureCount       int
 	GeocodePassCount        int
 	GeocodeFailCount        int
 	IncidentsInserted       int
@@ -48,6 +56,7 @@ type processOutcome int
 const (
 	outcomeNoRows processOutcome = iota
 	outcomeGateFailed
+	outcomeStaleCapture
 	outcomeGeocodeFailed
 	outcomeInserted
 )
@@ -75,7 +84,11 @@ func NewWorker(pool *pgxpool.Pool, geocoder Geocoder, log *slog.Logger, opts Wor
 	if now == nil {
 		now = func() time.Time { return time.Now().UTC() }
 	}
-	return &Worker{pool: pool, geocoder: geocoder, log: log, now: now}
+	maxAge := opts.MaxAge
+	if maxAge <= 0 {
+		maxAge = defaultDispatchMaxAge
+	}
+	return &Worker{pool: pool, geocoder: geocoder, log: log, now: now, maxAge: maxAge}
 }
 
 func (w *Worker) Run(ctx context.Context, interval time.Duration) {
@@ -97,6 +110,7 @@ func (w *Worker) Run(ctx context.Context, interval time.Duration) {
 				"batch_size", stats.BatchSize,
 				"gate_pass_count", stats.GatePassCount,
 				"gate_fail_count", stats.GateFailCount,
+				"stale_capture_count", stats.StaleCaptureCount,
 				"geocode_pass_count", stats.GeocodePassCount,
 				"geocode_fail_count", stats.GeocodeFailCount,
 				"incidents_inserted", stats.IncidentsInserted,
@@ -135,6 +149,9 @@ func (w *Worker) ProcessBatch(ctx context.Context, limit int) (BatchStats, error
 		switch outcome {
 		case outcomeGateFailed:
 			stats.GateFailCount++
+		case outcomeStaleCapture:
+			stats.GateFailCount++
+			stats.StaleCaptureCount++
 		case outcomeGeocodeFailed:
 			stats.GatePassCount++
 			stats.GeocodeFailCount++
@@ -164,6 +181,17 @@ func (w *Worker) processNext(ctx context.Context) (processOutcome, int64, error)
 			return outcomeNoRows, 0, err
 		}
 		return outcomeNoRows, 0, nil
+	}
+
+	if w.staleCapture(row.CapturedAt) {
+		w.log.Debug("dispatch transcript gate failed", "dispatch_transcript_id", row.ID, "reason", staleCaptureReason, "captured_at", row.CapturedAt.UTC(), "max_age", w.maxAge)
+		if err := markTranscriptParsed(ctx, tx, row.ID, nil); err != nil {
+			return outcomeNoRows, row.ID, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return outcomeNoRows, row.ID, err
+		}
+		return outcomeStaleCapture, row.ID, nil
 	}
 
 	parsed, pass, reason := ParseTranscript(row.DisplayText, row.VerificationConfidence)
@@ -201,6 +229,10 @@ func (w *Worker) processNext(ctx context.Context) (processOutcome, int64, error)
 		return outcomeNoRows, row.ID, err
 	}
 	return outcomeInserted, row.ID, nil
+}
+
+func (w *Worker) staleCapture(capturedAt time.Time) bool {
+	return w.now().UTC().Sub(capturedAt.UTC()) > w.maxAge
 }
 
 func lockNextTranscript(ctx context.Context, tx pgx.Tx) (transcriptRow, bool, error) {

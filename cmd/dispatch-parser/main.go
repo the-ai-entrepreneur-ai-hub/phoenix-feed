@@ -45,9 +45,9 @@ func main() {
 		fatal("mapbox", err)
 	}
 	cached := geocode.NewCachedGeocoder(geocode.NewPostgresCache(pool), mapbox, nil)
-	worker := dispatchparser.NewWorker(pool, cached, log, dispatchparser.WorkerOptions{})
+	worker := dispatchparser.NewWorker(pool, cached, log, dispatchparser.WorkerOptions{MaxAge: cfg.DispatchMaxAge})
 
-	log.Info("dispatch parser starting", "interval", 5*time.Second, "parser_version", dispatchparser.ParserVersion)
+	log.Info("dispatch parser starting", "interval", 5*time.Second, "parser_version", dispatchparser.ParserVersion, "dispatch_max_age", cfg.DispatchMaxAge)
 	worker.Run(ctx, 5*time.Second)
 	log.Info("dispatch parser shutting down")
 }

@@ -20,10 +20,17 @@ type Config struct {
 	MapboxToken      string        // server-side Mapbox geocoding token for SDR parser
 	ClearAfterMisses int           // consecutive successful polls absent before clearing
 	RawRetention     time.Duration // janitor: drop raw JSONB after this age
+	DispatchMaxAge   time.Duration // parser: reject SDR transcripts older than this age
+	SDRActiveWindow  time.Duration // janitor: clear SDR incidents after this age
 	LogLevel         string        // "debug" | "info" | "warn" | "error"
 	PaidTierEnabled  bool          // gates paid placeholders; default false
 	AllowedOrigins   []string      // exact browser origins allowed for CORS
 }
+
+const (
+	DefaultDispatchMaxAge  = 2 * time.Hour
+	DefaultSDRActiveWindow = 90 * time.Minute
+)
 
 func Load() (Config, error) {
 	c := Config{
@@ -37,6 +44,8 @@ func Load() (Config, error) {
 		PollInterval:     envDuration("POLL_INTERVAL", 60*time.Second),
 		PollJitter:       envDuration("POLL_JITTER", 10*time.Second),
 		RawRetention:     envDuration("RAW_RETENTION", 30*24*time.Hour),
+		DispatchMaxAge:   envDuration("DISPATCH_MAX_AGE", DefaultDispatchMaxAge),
+		SDRActiveWindow:  envDuration("SDR_ACTIVE_WINDOW", DefaultSDRActiveWindow),
 		PaidTierEnabled:  envBool("PAID_TIER_ENABLED", false),
 		AllowedOrigins:   envList("ALLOWED_ORIGINS"),
 	}
@@ -46,6 +55,12 @@ func Load() (Config, error) {
 	}
 	if c.ClearAfterMisses < 1 {
 		return c, fmt.Errorf("CLEAR_AFTER_MISSES must be >= 1")
+	}
+	if c.DispatchMaxAge <= 0 {
+		return c, fmt.Errorf("DISPATCH_MAX_AGE must be positive")
+	}
+	if c.SDRActiveWindow <= 0 {
+		return c, fmt.Errorf("SDR_ACTIVE_WINDOW must be positive")
 	}
 	return c, nil
 }

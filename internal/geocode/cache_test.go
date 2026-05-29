@@ -83,19 +83,34 @@ func TestCachedGeocoderRetriesStaleFailureAndStoresSuccess(t *testing.T) {
 	}
 }
 
-func TestCachedGeocoderStoresProviderFailure(t *testing.T) {
+func TestCachedGeocoderStoresPermanentProviderFailure(t *testing.T) {
 	cache := newFakeCache()
-	provider := &fakeProvider{err: errProviderFailed}
+	provider := &fakeProvider{err: ErrNoResult}
 	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
 	geocoder := NewCachedGeocoder(cache, provider, func() time.Time { return now })
 
 	_, err := geocoder.Geocode(context.Background(), "bad")
-	if !errors.Is(err, errProviderFailed) {
+	if !errors.Is(err, ErrNoResult) {
 		t.Fatalf("err = %v, want provider failure", err)
 	}
 	row := cache.rows["bad"]
 	if row.success || row.geocodedAt != now {
 		t.Fatalf("stored row = %+v", row)
+	}
+}
+
+func TestCachedGeocoderDoesNotStoreTransientProviderFailure(t *testing.T) {
+	cache := newFakeCache()
+	provider := &fakeProvider{err: context.DeadlineExceeded}
+	now := time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
+	geocoder := NewCachedGeocoder(cache, provider, func() time.Time { return now })
+
+	_, err := geocoder.Geocode(context.Background(), "bad")
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want deadline exceeded", err)
+	}
+	if _, ok := cache.rows["bad"]; ok {
+		t.Fatalf("transient failure was stored in cache: %+v", cache.rows["bad"])
 	}
 }
 

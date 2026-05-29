@@ -120,16 +120,19 @@ write_files:
         sleep 2
       done
 
-      docker compose --env-file .env -f docker-compose.prod.yml \
-        exec -T db psql \
-        -U "${POSTGRES_USER}" \
-        -d "${POSTGRES_DB}" < db/schema.sql
+      COMPOSE_ENV_FILE=.env \
+        COMPOSE_FILE=docker-compose.prod.yml \
+        POSTGRES_USER="${POSTGRES_USER}" \
+        POSTGRES_DB="${POSTGRES_DB}" \
+        bash scripts/apply-sql-file.sh db/schema.sql
       for migration in db/migrations/*.sql; do
         [ -f "$migration" ] || continue
-        docker compose --env-file .env -f docker-compose.prod.yml \
-          exec -T db psql \
-          -U "${POSTGRES_USER}" \
-          -d "${POSTGRES_DB}" < "$migration"
+        echo "apply ${migration}"
+        COMPOSE_ENV_FILE=.env \
+          COMPOSE_FILE=docker-compose.prod.yml \
+          POSTGRES_USER="${POSTGRES_USER}" \
+          POSTGRES_DB="${POSTGRES_DB}" \
+          bash scripts/apply-sql-file.sh "$migration"
       done
 
       docker compose --env-file .env -f docker-compose.prod.yml up -d

@@ -39,7 +39,7 @@ wait_for_db() {
 
 apply_sql_file() {
   local file="$1"
-  docker compose -f "$COMPOSE_FILE" exec -T db psql -U phoenix -d phoenix_feed < "$file"
+  COMPOSE_FILE="$COMPOSE_FILE" bash scripts/apply-sql-file.sh "$file"
 }
 
 apply_schema() {

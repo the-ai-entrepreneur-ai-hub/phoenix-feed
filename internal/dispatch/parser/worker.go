@@ -18,8 +18,9 @@ import (
 const ParserVersion = "sdr-audio-fallback-phase2"
 
 const (
-	defaultDispatchMaxAge = 2 * time.Hour
-	staleCaptureReason    = "stale_capture"
+	defaultDispatchMaxAge     = 2 * time.Hour
+	defaultGeocodeMaxAttempts = 5
+	staleCaptureReason        = "stale_capture"
 )
 
 type Geocoder interface {
@@ -27,16 +28,18 @@ type Geocoder interface {
 }
 
 type Worker struct {
-	pool     *pgxpool.Pool
-	geocoder Geocoder
-	log      *slog.Logger
-	now      func() time.Time
-	maxAge   time.Duration
+	pool               *pgxpool.Pool
+	geocoder           Geocoder
+	log                *slog.Logger
+	now                func() time.Time
+	maxAge             time.Duration
+	maxGeocodeAttempts int
 }
 
 type WorkerOptions struct {
-	Now    func() time.Time
-	MaxAge time.Duration
+	Now                func() time.Time
+	MaxAge             time.Duration
+	MaxGeocodeAttempts int
 }
 
 type BatchStats struct {
@@ -58,6 +61,7 @@ const (
 	outcomeGateFailed
 	outcomeStaleCapture
 	outcomeGeocodeFailed
+	outcomeGeocodeRetry
 	outcomeInserted
 )
 
@@ -67,6 +71,7 @@ type transcriptRow struct {
 	ReceivedAt             time.Time
 	DisplayText            string
 	VerificationConfidence float64
+	GeocodeAttempts        int
 }
 
 type incidentUnitJSON struct {
@@ -88,7 +93,11 @@ func NewWorker(pool *pgxpool.Pool, geocoder Geocoder, log *slog.Logger, opts Wor
 	if maxAge <= 0 {
 		maxAge = defaultDispatchMaxAge
 	}
-	return &Worker{pool: pool, geocoder: geocoder, log: log, now: now, maxAge: maxAge}
+	maxGeocodeAttempts := opts.MaxGeocodeAttempts
+	if maxGeocodeAttempts <= 0 {
+		maxGeocodeAttempts = defaultGeocodeMaxAttempts
+	}
+	return &Worker{pool: pool, geocoder: geocoder, log: log, now: now, maxAge: maxAge, maxGeocodeAttempts: maxGeocodeAttempts}
 }
 
 func (w *Worker) Run(ctx context.Context, interval time.Duration) {
@@ -155,10 +164,16 @@ func (w *Worker) ProcessBatch(ctx context.Context, limit int) (BatchStats, error
 		case outcomeGeocodeFailed:
 			stats.GatePassCount++
 			stats.GeocodeFailCount++
+		case outcomeGeocodeRetry:
+			stats.GatePassCount++
+			stats.GeocodeFailCount++
 		case outcomeInserted:
 			stats.GatePassCount++
 			stats.GeocodePassCount++
 			stats.IncidentsInserted++
+		}
+		if outcome == outcomeGeocodeRetry {
+			break
 		}
 	}
 	stats.BatchDuration = time.Since(start)
@@ -208,7 +223,27 @@ func (w *Worker) processNext(ctx context.Context) (processOutcome, int64, error)
 
 	geo, err := w.geocoder.Geocode(ctx, parsed.LocationText)
 	if err != nil {
-		w.log.Debug("dispatch transcript geocode failed", "dispatch_transcript_id", row.ID, "err", err)
+		w.log.Warn("dispatch transcript geocode failed", "dispatch_transcript_id", row.ID, "err", err)
+		if !geocode.IsPermanentFailure(err) {
+			attempts := row.GeocodeAttempts + 1
+			if attempts >= w.maxGeocodeAttempts {
+				w.log.Error("dispatch transcript geocode retry cap reached", "dispatch_transcript_id", row.ID, "attempts", attempts, "err", err)
+				if err := markTranscriptParsedAfterGeocodeAttempts(ctx, tx, row.ID, nil, attempts); err != nil {
+					return outcomeNoRows, row.ID, err
+				}
+				if err := tx.Commit(ctx); err != nil {
+					return outcomeNoRows, row.ID, err
+				}
+				return outcomeGeocodeFailed, row.ID, nil
+			}
+			if err := recordTranscriptGeocodeAttempt(ctx, tx, row.ID, attempts); err != nil {
+				return outcomeNoRows, row.ID, err
+			}
+			if err := tx.Commit(ctx); err != nil {
+				return outcomeNoRows, row.ID, err
+			}
+			return outcomeGeocodeRetry, row.ID, nil
+		}
 		if err := markTranscriptParsed(ctx, tx, row.ID, nil); err != nil {
 			return outcomeNoRows, row.ID, err
 		}
@@ -239,13 +274,14 @@ func lockNextTranscript(ctx context.Context, tx pgx.Tx) (transcriptRow, bool, er
 	var row transcriptRow
 	var confidence sql.NullFloat64
 	err := tx.QueryRow(ctx, `
-		SELECT id, captured_at, received_at, display_text, verification_confidence::float8
+		SELECT id, captured_at, received_at, display_text, verification_confidence::float8,
+		       COALESCE(geocode_attempts, 0)
 		FROM dispatch_transcripts
 		WHERE parsed_at IS NULL
-		ORDER BY received_at ASC
+		ORDER BY COALESCE(geocode_attempts, 0), received_at ASC
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED`,
-	).Scan(&row.ID, &row.CapturedAt, &row.ReceivedAt, &row.DisplayText, &confidence)
+	).Scan(&row.ID, &row.CapturedAt, &row.ReceivedAt, &row.DisplayText, &confidence, &row.GeocodeAttempts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return transcriptRow{}, false, nil
 	}
@@ -342,6 +378,32 @@ func markTranscriptParsed(ctx context.Context, tx pgx.Tx, transcriptID int64, in
 	)
 	if err != nil {
 		return fmt.Errorf("mark dispatch transcript parsed %d: %w", transcriptID, err)
+	}
+	return nil
+}
+
+func recordTranscriptGeocodeAttempt(ctx context.Context, tx pgx.Tx, transcriptID int64, attempts int) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE dispatch_transcripts
+		SET geocode_attempts = $2
+		WHERE id = $1`,
+		transcriptID, attempts,
+	)
+	if err != nil {
+		return fmt.Errorf("record dispatch transcript geocode attempt %d: %w", transcriptID, err)
+	}
+	return nil
+}
+
+func markTranscriptParsedAfterGeocodeAttempts(ctx context.Context, tx pgx.Tx, transcriptID int64, incidentDBID *int64, attempts int) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE dispatch_transcripts
+		SET parsed_at = NOW(), parsed_incident_id = $2, geocode_attempts = $3
+		WHERE id = $1`,
+		transcriptID, incidentDBID, attempts,
+	)
+	if err != nil {
+		return fmt.Errorf("mark dispatch transcript parsed after geocode attempts %d: %w", transcriptID, err)
 	}
 	return nil
 }

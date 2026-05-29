@@ -5,6 +5,7 @@ package lifecycle
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -33,12 +34,11 @@ func New(s *store.Store, clearAfterMisses int, log *slog.Logger) *Manager {
 // On a failed poll we ONLY record the source_polls row. Failed polls never
 // advance the clearing state — that was the whole point of the Codex fix.
 func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
-	pollID, err := m.store.RecordPoll(ctx, r)
-	if err != nil {
-		return err
-	}
-
 	if !r.Success() {
+		pollID, err := m.store.RecordPoll(ctx, r)
+		if err != nil {
+			return err
+		}
 		m.log.Warn("poll failed",
 			"source", r.Source,
 			"status", r.StatusCode,
@@ -47,29 +47,44 @@ func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
 		return nil
 	}
 
+	pollID, err := m.store.RecordPollPending(ctx, r)
+	if err != nil {
+		return err
+	}
 	observedAt := r.StartedAt
 
 	observedIDs := make([]string, 0, len(r.Incidents))
 	for _, inc := range r.Incidents {
 		if err := m.store.UpsertIncident(ctx, inc, pollID, observedAt); err != nil {
+			applyErr := fmt.Errorf("upsert incident %s/%s: %w", inc.Source, inc.IncidentID, err)
 			m.log.Error("upsert", "incident_id", inc.IncidentID, "err", err)
-			continue
+			return m.failPollApply(ctx, pollID, applyErr)
 		}
 		observedIDs = append(observedIDs, inc.IncidentID)
 	}
 
 	if err := m.store.MarkMissing(ctx, r.Source, observedAt, observedIDs); err != nil {
+		applyErr := fmt.Errorf("mark missing %s: %w", r.Source, err)
 		m.log.Error("mark missing", "err", err)
+		return m.failPollApply(ctx, pollID, applyErr)
 	}
 
 	cleared, err := m.store.SweepCleared(ctx, r.Source, m.clearAfterMisses)
 	if err != nil {
+		applyErr := fmt.Errorf("sweep cleared %s: %w", r.Source, err)
 		m.log.Error("sweep cleared", "err", err)
+		return m.failPollApply(ctx, pollID, applyErr)
 	} else if len(cleared) > 0 {
 		if err := m.store.RecordClearedEvents(ctx, cleared, pollID); err != nil {
+			applyErr := fmt.Errorf("record cleared events %s: %w", r.Source, err)
 			m.log.Error("record cleared events", "err", err)
+			return m.failPollApply(ctx, pollID, applyErr)
 		}
 		m.log.Info("incidents cleared", "source", r.Source, "count", len(cleared), "ids", clearedIncidentIDs(cleared))
+	}
+
+	if err := m.store.MarkPollSucceeded(ctx, pollID); err != nil {
+		return fmt.Errorf("mark poll succeeded %d: %w", pollID, err)
 	}
 
 	m.log.Info("poll applied",
@@ -79,6 +94,13 @@ func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
 		"latency_ms", r.LatencyMS,
 		"poll_id", pollID)
 	return nil
+}
+
+func (m *Manager) failPollApply(ctx context.Context, pollID int64, applyErr error) error {
+	if err := m.store.MarkPollFailed(ctx, pollID, applyErr); err != nil {
+		return fmt.Errorf("%w; additionally failed to mark poll failed: %v", applyErr, err)
+	}
+	return applyErr
 }
 
 func clearedIncidentIDs(cleared []store.ClearedIncident) []string {

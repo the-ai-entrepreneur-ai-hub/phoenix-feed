@@ -23,6 +23,25 @@ const (
 
 var ErrNoResult = errors.New("geocode no result")
 
+type StatusError struct {
+	StatusCode int
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("mapbox status %d", e.StatusCode)
+}
+
+func IsPermanentFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, ErrNoResult) {
+		return true
+	}
+	var statusErr *StatusError
+	return errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusBadRequest
+}
+
 type Result struct {
 	Lon float64
 	Lat float64
@@ -128,7 +147,11 @@ func (c *MapboxClient) Geocode(ctx context.Context, address string) (Result, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Result{}, fmt.Errorf("mapbox status %d", resp.StatusCode)
+		statusErr := &StatusError{StatusCode: resp.StatusCode}
+		if resp.StatusCode == http.StatusBadRequest {
+			return Result{}, fmt.Errorf("%w: %w", ErrNoResult, statusErr)
+		}
+		return Result{}, statusErr
 	}
 
 	var body struct {

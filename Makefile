@@ -54,14 +54,14 @@ db-down:
 
 .PHONY: db-init
 db-init:
-	$(COMPOSE) exec -T db psql -U phoenix -d phoenix_feed < db/schema.sql
+	bash scripts/apply-sql-file.sh db/schema.sql
 
 .PHONY: db-migrate
 db-migrate:
 	@for f in db/migrations/*.sql; do \
 		if [ -f "$$f" ]; then \
 			echo "apply $$f"; \
-			$(COMPOSE) exec -T db psql -U phoenix -d phoenix_feed < "$$f" || exit 1; \
+			bash scripts/apply-sql-file.sh "$$f" || exit 1; \
 		fi; \
 	done
 

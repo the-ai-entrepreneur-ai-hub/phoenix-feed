@@ -3,6 +3,7 @@ package geocode
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -61,6 +62,46 @@ func TestMapboxClientReturnsNoResultOnEmptyFeatures(t *testing.T) {
 	_, err = client.Geocode(context.Background(), "Not A Real Address")
 	if err != ErrNoResult {
 		t.Fatalf("err = %v, want ErrNoResult", err)
+	}
+}
+
+func TestMapboxClientTreatsBadRequestAsPermanentFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "bad request", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	client, err := NewMapboxClient("test-token", WithBaseURL(server.URL), WithHTTPClient(server.Client()), WithLimiter(NoopLimiter{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Geocode(context.Background(), "Not A Real Address")
+	if !errors.Is(err, ErrNoResult) {
+		t.Fatalf("err = %v, want ErrNoResult", err)
+	}
+	if !IsPermanentFailure(err) {
+		t.Fatalf("err = %v, want permanent failure", err)
+	}
+}
+
+func TestMapboxClientTreatsRateLimitAsRetryableFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	client, err := NewMapboxClient("test-token", WithBaseURL(server.URL), WithHTTPClient(server.Client()), WithLimiter(NoopLimiter{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Geocode(context.Background(), "2350 West Obispo Avenue")
+	if err == nil {
+		t.Fatal("Geocode succeeded, want rate limit error")
+	}
+	if IsPermanentFailure(err) {
+		t.Fatalf("err = %v, want retryable failure", err)
 	}
 }
 

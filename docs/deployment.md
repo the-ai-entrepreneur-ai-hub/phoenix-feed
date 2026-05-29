@@ -56,8 +56,9 @@ Restart after edits:
 
 ```bash
 docker compose --env-file .env -f docker-compose.prod.yml up -d --build
-docker compose --env-file .env -f docker-compose.prod.yml exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < db/schema.sql
-for f in db/migrations/*.sql; do docker compose --env-file .env -f docker-compose.prod.yml exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$f"; done
+set -a; . ./.env; set +a
+COMPOSE_ENV_FILE=.env COMPOSE_FILE=docker-compose.prod.yml bash scripts/apply-sql-file.sh db/schema.sql
+for f in db/migrations/*.sql; do COMPOSE_ENV_FILE=.env COMPOSE_FILE=docker-compose.prod.yml bash scripts/apply-sql-file.sh "$f"; done
 ```
 
 ## 4. Generate the First Paid Key

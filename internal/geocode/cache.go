@@ -52,7 +52,7 @@ func (g *CachedGeocoder) Geocode(ctx context.Context, address string) (Result, e
 
 	result, err := g.provider.Geocode(ctx, address)
 	if err != nil {
-		if g.cache != nil {
+		if g.cache != nil && IsPermanentFailure(err) {
 			_ = g.cache.Store(ctx, address, Result{}, false, now)
 		}
 		return Result{}, err

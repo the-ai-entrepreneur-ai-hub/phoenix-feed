@@ -1,0 +1,8 @@
+- [x] Add regression tests for lifecycle write failure not advancing latest source success.
+- [x] Add regression tests for transient geocode retry, permanent geocode consumption, and retry cap behavior.
+- [x] Add regression test for strict SQL helper non-zero behavior on failing SQL.
+- [x] Implement deferred poll success recording and hard error returns on apply write failures.
+- [x] Add nullable `dispatch_transcripts.geocode_attempts` migration and parser retry behavior.
+- [x] Classify Mapbox/cache geocode failures and avoid negative-caching retryable failures.
+- [x] Harden Makefile, smoke scripts, cloud-init, and deployment docs to use strict `psql` flags.
+- [x] Run `go test ./...`, `go vet ./...`, `go build ./...`, and `openspec validate backend-reliability-fixes --strict`.

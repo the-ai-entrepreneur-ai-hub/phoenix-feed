@@ -38,7 +38,7 @@ function Wait-ForDB {
 }
 
 function Apply-SqlFile($Path) {
-    Get-Content -Raw $Path | docker compose -f $ComposeFile exec -T db psql -U phoenix -d phoenix_feed
+    Get-Content -Raw $Path | docker compose -f $ComposeFile exec -T db psql -v ON_ERROR_STOP=1 --single-transaction -U phoenix -d phoenix_feed
     if ($LASTEXITCODE -ne 0) { throw "failed applying $Path" }
 }
 

@@ -2,6 +2,7 @@ package dispatchparser
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -118,6 +119,147 @@ func TestProcessBatchPromotesFreshCapture(t *testing.T) {
 	}
 	if incidentCount != 1 {
 		t.Fatalf("active incident count = %d, want 1", incidentCount)
+	}
+}
+
+func TestProcessBatchRetriesTransientGeocodeFailure(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	capturedAt := fixedNow().Add(-10 * time.Minute)
+	insertTranscript(t, pool, "retry_engine_2510.wav", capturedAt, "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.", 0.92)
+
+	geocoder := &sequenceGeocoder{
+		errs: []error{context.DeadlineExceeded},
+		results: []geocode.Result{
+			{Lon: -112.074, Lat: 33.4484},
+		},
+	}
+	worker := NewWorker(pool, geocoder, slog.Default(), WorkerOptions{Now: fixedNow})
+	stats, err := worker.ProcessBatch(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.BatchSize != 1 || stats.GeocodeFailCount != 1 || stats.IncidentsInserted != 0 {
+		t.Fatalf("stats after timeout = %+v", stats)
+	}
+
+	var parsedAt sql.NullTime
+	var attempts sql.NullInt64
+	if err := pool.QueryRow(ctx, `
+		SELECT parsed_at, geocode_attempts
+		FROM dispatch_transcripts
+		WHERE wav_filename = 'retry_engine_2510.wav'`).Scan(&parsedAt, &attempts); err != nil {
+		t.Fatal(err)
+	}
+	if parsedAt.Valid {
+		t.Fatalf("parsed_at = %s, want null after transient geocode failure", parsedAt.Time)
+	}
+	if !attempts.Valid || attempts.Int64 != 1 {
+		t.Fatalf("geocode_attempts = %+v, want 1", attempts)
+	}
+	if geocoder.calls != 1 {
+		t.Fatalf("geocoder calls = %d, want 1", geocoder.calls)
+	}
+
+	stats, err = worker.ProcessBatch(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.BatchSize != 1 || stats.GeocodePassCount != 1 || stats.IncidentsInserted != 1 {
+		t.Fatalf("stats after retry = %+v", stats)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT parsed_at, parsed_incident_id
+		FROM dispatch_transcripts
+		WHERE wav_filename = 'retry_engine_2510.wav'`).Scan(&parsedAt, new(sql.NullInt64)); err != nil {
+		t.Fatal(err)
+	}
+	if !parsedAt.Valid {
+		t.Fatal("parsed_at stayed null after successful retry")
+	}
+}
+
+func TestProcessBatchConsumesPermanentGeocodeNoResult(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	capturedAt := fixedNow().Add(-10 * time.Minute)
+	insertTranscript(t, pool, "no_result_engine_2510.wav", capturedAt, "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.", 0.92)
+
+	worker := NewWorker(pool, &sequenceGeocoder{errs: []error{geocode.ErrNoResult}}, slog.Default(), WorkerOptions{Now: fixedNow})
+	stats, err := worker.ProcessBatch(ctx, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.BatchSize != 1 || stats.GeocodeFailCount != 1 || stats.IncidentsInserted != 0 {
+		t.Fatalf("stats = %+v", stats)
+	}
+
+	var parsedAt sql.NullTime
+	var parsedIncidentID sql.NullInt64
+	if err := pool.QueryRow(ctx, `
+		SELECT parsed_at, parsed_incident_id
+		FROM dispatch_transcripts
+		WHERE wav_filename = 'no_result_engine_2510.wav'`).Scan(&parsedAt, &parsedIncidentID); err != nil {
+		t.Fatal(err)
+	}
+	if !parsedAt.Valid {
+		t.Fatal("parsed_at is null, want permanent geocode failure consumed")
+	}
+	if parsedIncidentID.Valid {
+		t.Fatalf("parsed_incident_id = %d, want null", parsedIncidentID.Int64)
+	}
+	var incidentCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM incidents WHERE source = 'sdr_audio'`).Scan(&incidentCount); err != nil {
+		t.Fatal(err)
+	}
+	if incidentCount != 0 {
+		t.Fatalf("incident count = %d, want 0", incidentCount)
+	}
+}
+
+func TestProcessBatchConsumesRetryableGeocodeFailureAfterDefaultAttemptCap(t *testing.T) {
+	pool := openIntegrationPool(t)
+	ctx := context.Background()
+	capturedAt := fixedNow().Add(-10 * time.Minute)
+	insertTranscript(t, pool, "retry_cap_engine_2510.wav", capturedAt, "Engine 2510. CDEC 4. Overdose. 2350 West Obispo Avenue. Unit 204.", 0.92)
+
+	worker := NewWorker(pool, &sequenceGeocoder{err: context.DeadlineExceeded}, slog.Default(), WorkerOptions{Now: fixedNow})
+	for attempt := 1; attempt <= 4; attempt++ {
+		if _, err := worker.ProcessBatch(ctx, 50); err != nil {
+			t.Fatal(err)
+		}
+		var parsedAt sql.NullTime
+		var attempts sql.NullInt64
+		if err := pool.QueryRow(ctx, `
+			SELECT parsed_at, geocode_attempts
+			FROM dispatch_transcripts
+			WHERE wav_filename = 'retry_cap_engine_2510.wav'`).Scan(&parsedAt, &attempts); err != nil {
+			t.Fatal(err)
+		}
+		if parsedAt.Valid {
+			t.Fatalf("attempt %d parsed_at = %s, want null before cap", attempt, parsedAt.Time)
+		}
+		if !attempts.Valid || attempts.Int64 != int64(attempt) {
+			t.Fatalf("attempt %d geocode_attempts = %+v", attempt, attempts)
+		}
+	}
+
+	if _, err := worker.ProcessBatch(ctx, 50); err != nil {
+		t.Fatal(err)
+	}
+	var parsedAt sql.NullTime
+	var attempts sql.NullInt64
+	if err := pool.QueryRow(ctx, `
+		SELECT parsed_at, geocode_attempts
+		FROM dispatch_transcripts
+		WHERE wav_filename = 'retry_cap_engine_2510.wav'`).Scan(&parsedAt, &attempts); err != nil {
+		t.Fatal(err)
+	}
+	if !parsedAt.Valid {
+		t.Fatal("parsed_at is null, want consumed at default retry cap")
+	}
+	if !attempts.Valid || attempts.Int64 != 5 {
+		t.Fatalf("geocode_attempts = %+v, want 5", attempts)
 	}
 }
 
@@ -255,6 +397,33 @@ func (stubGeocoder) Geocode(context.Context, string) (geocode.Result, error) {
 	return geocode.Result{Lon: -112.074, Lat: 33.4484}, nil
 }
 
+type sequenceGeocoder struct {
+	err     error
+	errs    []error
+	results []geocode.Result
+	calls   int
+}
+
+func (g *sequenceGeocoder) Geocode(context.Context, string) (geocode.Result, error) {
+	g.calls++
+	if len(g.errs) > 0 {
+		err := g.errs[0]
+		g.errs = g.errs[1:]
+		if err != nil {
+			return geocode.Result{}, err
+		}
+	}
+	if g.err != nil {
+		return geocode.Result{}, g.err
+	}
+	if len(g.results) > 0 {
+		result := g.results[0]
+		g.results = g.results[1:]
+		return result, nil
+	}
+	return geocode.Result{Lon: -112.074, Lat: 33.4484}, nil
+}
+
 func fixedNow() time.Time {
 	return time.Date(2026, 5, 28, 8, 0, 0, 0, time.UTC)
 }
@@ -310,6 +479,7 @@ func openIntegrationPool(t *testing.T) *pgxpool.Pool {
 		"../../../db/migrations/0004_incidents_id_and_geocode_cache.sql",
 		"../../../db/migrations/0005_cleanup_bad_natures.sql",
 		"../../../db/migrations/0006_clear_stale_sdr_audio_incidents.sql",
+		"../../../db/migrations/0007_dispatch_transcript_geocode_attempts.sql",
 	} {
 		applySQLFile(t, pool, path)
 	}

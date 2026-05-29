@@ -233,6 +233,16 @@ func (s *Store) Close() { s.pool.Close() }
 // RecordPoll inserts a row into source_polls and returns the new poll_id.
 // Called both on success and failure so the audit trail is complete.
 func (s *Store) RecordPoll(ctx context.Context, r model.PollResult) (int64, error) {
+	return s.recordPoll(ctx, r, r.Success(), pollErrorString(r.Err))
+}
+
+// RecordPollPending records a successful upstream poll as not yet applied.
+// Lifecycle flips it to success only after backend writes complete.
+func (s *Store) RecordPollPending(ctx context.Context, r model.PollResult) (int64, error) {
+	return s.recordPoll(ctx, r, false, "poll apply pending")
+}
+
+func (s *Store) recordPoll(ctx context.Context, r model.PollResult, success bool, errStr string) (int64, error) {
 	const q = `
 		INSERT INTO source_polls (
 			source, request_url, started_at, finished_at, status_code,
@@ -241,18 +251,38 @@ func (s *Store) RecordPoll(ctx context.Context, r model.PollResult) (int64, erro
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''),$9,$10,NULLIF($11,''))
 		RETURNING poll_id`
 
-	var errStr string
-	if r.Err != nil {
-		errStr = r.Err.Error()
-	}
-
 	var id int64
 	err := s.pool.QueryRow(ctx, q,
 		r.Source, r.RequestURL, r.StartedAt, r.FinishedAt, r.StatusCode,
 		r.LatencyMS, len(r.Incidents), r.PayloadSHA256, r.ParserVersion,
-		r.Success(), errStr,
+		success, errStr,
 	).Scan(&id)
 	return id, err
+}
+
+func (s *Store) MarkPollSucceeded(ctx context.Context, pollID int64) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE source_polls
+		SET success = TRUE, error = NULL
+		WHERE poll_id = $1`, pollID,
+	)
+	return err
+}
+
+func (s *Store) MarkPollFailed(ctx context.Context, pollID int64, applyErr error) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE source_polls
+		SET success = FALSE, error = NULLIF($2, '')
+		WHERE poll_id = $1`, pollID, pollErrorString(applyErr),
+	)
+	return err
+}
+
+func pollErrorString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 // ListActiveIncidents returns active incidents plus source staleness metadata.

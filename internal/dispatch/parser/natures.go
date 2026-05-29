@@ -2,33 +2,44 @@ package dispatchparser
 
 import "strings"
 
-var knownDispatchNatures = []string{
-	"Residential Fire Alarm",
-	"Commercial Fire Alarm",
-	"Level of Consciousness",
-	"Difficulty Breathing",
-	"Smoke Investigation",
-	"Medical Assignment",
-	"Breathing Problems",
-	"Cardiac Problems",
-	"Cardiac Problem",
-	"Unknown Trouble",
-	"Vehicle Accident",
-	"Vehicle Crash",
-	"Structure Fire",
-	"Working Fire",
-	"Brush Fire",
-	"Trash Fire",
-	"House Fire",
-	"Gas Leak",
-	"Sick Person",
-	"Welfare Check",
-	"Check Welfare",
-	"Overdose",
-	"Seizure",
-	"Assault",
-	"Hazmat",
-	"Fall",
+type dispatchNaturePhrase struct {
+	canonical string
+	phrases   []string
+}
+
+var knownDispatchNatures = []dispatchNaturePhrase{
+	{canonical: "Motor Vehicle Accident With Motorcycle"},
+	{canonical: "Residential Fire Alarm"},
+	{canonical: "Commercial Fire Alarm"},
+	{canonical: "Level of Consciousness"},
+	{canonical: "Difficulty Breathing"},
+	{canonical: "Smoke Investigation"},
+	{canonical: "Medical Assignment"},
+	{canonical: "Breathing Problems"},
+	{canonical: "Cardiac Problems"},
+	{canonical: "Cardiac Problem"},
+	{canonical: "Unknown Trouble"},
+	{canonical: "Motor Vehicle Accident"},
+	{canonical: "Vehicle Accident"},
+	{canonical: "Vehicle Crash"},
+	{canonical: "Structure Fire"},
+	{canonical: "Working Fire"},
+	{canonical: "Brush Fire"},
+	{canonical: "Trash Fire"},
+	{canonical: "House Fire"},
+	{canonical: "Injured Person"},
+	{canonical: "Animal Issue"},
+	{canonical: "Ill Person", phrases: []string{"Hill Person"}},
+	{canonical: "Gas Leak", phrases: []string{"Natural Gas Leak"}},
+	{canonical: "Sick Person"},
+	{canonical: "Welfare Check"},
+	{canonical: "Check Welfare"},
+	{canonical: "Overdose"},
+	{canonical: "Seizure"},
+	{canonical: "Assault"},
+	{canonical: "Hazmat"},
+	{canonical: "Stroke"},
+	{canonical: "Fall"},
 }
 
 func matchKnownNature(candidate string) string {
@@ -39,15 +50,20 @@ func matchKnownNature(candidate string) string {
 
 	best := ""
 	bestIndex := -1
+	bestLength := 0
 	for _, nature := range knownDispatchNatures {
-		needle := " " + normalizeNatureForMatch(nature) + " "
-		index := strings.Index(normalizedCandidate, needle)
-		if index < 0 {
-			continue
-		}
-		if bestIndex == -1 || index < bestIndex || (index == bestIndex && len(nature) > len(best)) {
-			best = nature
-			bestIndex = index
+		phrases := append([]string{nature.canonical}, nature.phrases...)
+		for _, phrase := range phrases {
+			needle := " " + normalizeNatureForMatch(phrase) + " "
+			index := strings.Index(normalizedCandidate, needle)
+			if index < 0 {
+				continue
+			}
+			if bestIndex == -1 || index < bestIndex || (index == bestIndex && len(phrase) > bestLength) {
+				best = nature.canonical
+				bestIndex = index
+				bestLength = len(phrase)
+			}
 		}
 	}
 	return best

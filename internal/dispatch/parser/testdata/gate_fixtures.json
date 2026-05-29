@@ -189,8 +189,7 @@
     "want_address": "447 East Broadway Ave",
     "want_channel": "CDEC 12",
     "want_units": [
-      {"unit_name": "AMR 207", "unit_type": "AMR"},
-      {"unit_name": "Ladder 263", "unit_type": "Ladder"}
+      {"unit_name": "AMR 207", "unit_type": "AMR"}
     ]
   },
   {

@@ -75,7 +75,7 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: 48px;
-  padding: 30px 120px 120px;
+  padding: 104px 120px 120px;
   position: relative;
   max-width: 1300px;
   margin: 0 auto;
@@ -238,7 +238,7 @@ a {
 }
 
 .azlaunch-footer-links {
-  color: #ffffff;
+  color: #1c2233;
   font-size: 18px;
   line-height: 1.2;
   font-weight: 800;
@@ -252,7 +252,7 @@ a {
 
 .azlaunch-footer-mail {
   margin-top: 12px;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(28, 34, 51, 0.78);
   font-size: 18px;
   line-height: 1.2;
   font-weight: 700;

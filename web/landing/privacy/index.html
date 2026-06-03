@@ -29,87 +29,55 @@
 
   <main class="ppage-content-shell">
     <article class="ppage-content">
-      <p><em>Effective 30 May 2026. Plain English, no legalese.</em></p>
+      <p><em>Effective 3 June 2026.</em></p>
 
-      <p class="ppage-callout"><strong>Short version.</strong> We do not ask for your name or email, we do not sell your data, and we do not show ads. We do collect a few technical identifiers needed to run the app, deliver the alerts you turn on, and keep it stable. The details are below.</p>
+      <p class="ppage-callout"><strong>Overview.</strong> Cactus Watch is designed to minimize data collection. We do not display advertisements or use advertising networks. We do not use cross-app tracking for advertising purposes.</p>
 
-      <h2>What we collect</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Why</th>
-            <th>Stored</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>A device identifier (Apple identifierForVendor) and a random app client ID</td>
-            <td>Tell devices apart so we can rate-limit fairly and tie your saved alert choices to your install</td>
-            <td>On your device and in our database while the app is installed</td>
-          </tr>
-          <tr>
-            <td>Push notification token</td>
-            <td>Deliver the station alerts you choose to turn on (Cactus Watch Plus)</td>
-            <td>In our database until you disable alerts or uninstall</td>
-          </tr>
-          <tr>
-            <td>Your saved stations/units and which incidents you have already been alerted about</td>
-            <td>So alerts go to the right device and you are not pinged twice for the same call</td>
-            <td>In our database while the app is installed</td>
-          </tr>
-          <tr>
-            <td>Subscription status from Apple (via RevenueCat): a subscriber ID and paid/not-paid</td>
-            <td>Unlock Cactus Watch Plus features</td>
-            <td>With RevenueCat and in our records while you subscribe</td>
-          </tr>
-          <tr>
-            <td>Crash and diagnostic reports (Firebase Crashlytics)</td>
-            <td>Find and fix crashes</td>
-            <td>With Google Firebase per their retention</td>
-          </tr>
-          <tr>
-            <td>Approximate location, only the moment you tap the locate-me button on the map</td>
-            <td>Center the map on you</td>
-            <td>Not stored on our servers and never shared</td>
-          </tr>
-          <tr>
-            <td>Your IP address and the fact that a request hit our API</td>
-            <td>Rate-limit abusive clients and aggregate capacity counters</td>
-            <td>In server logs for 7 days, then rotated</td>
-          </tr>
-        </tbody>
-      </table>
+      <p>We do not require or collect user-provided personal data such as names, email addresses, or phone numbers. Payment information for subscriptions is processed by Apple or Google and is not provided to us.</p>
 
-      <p>We do <strong>not</strong> collect:</p>
+      <p>We process only limited technical information necessary to operate the app, provide features you choose to use, and maintain system stability and security.</p>
+
+      <h2>Information We Process</h2>
+      <p>Depending on how you use the app, we may process limited technical information, including:</p>
       <ul>
-        <li>Your name, email, phone number, or mailing address</li>
-        <li>Background or continuous location (location is used only on the locate-me tap, never in the background)</li>
-        <li>Your contacts, photos, or microphone</li>
-        <li>Advertising identifiers (IDFA) or cross-app tracking data — we do not track you across other apps or websites</li>
-        <li>Your payment card details — Apple handles billing; we never see your card</li>
+        <li>Device and application identifiers used to operate and maintain the app</li>
+        <li>Push notification tokens used to deliver notifications you enable</li>
+        <li>Subscription status information used to provide paid features</li>
+        <li>Crash, diagnostic, and performance information used to maintain and improve stability</li>
+        <li>Basic technical connection information, such as IP address, used for security, abuse prevention, and operational purposes</li>
       </ul>
 
-      <h2>What you see in the app</h2>
-      <p>Active fire and EMS incidents from the City of Phoenix Fire Department public incident dashboard. Each row is what dispatch publishes: a location, a category, and a timestamp, with responding-unit and dispatch-channel detail available on Cactus Watch Plus. We add a human label for cryptic codes (for example, Phoenix <code>962</code> becomes <code>Vehicle Crash</code> in our display) but the underlying data is theirs, not ours.</p>
+      <h2>How We Use Information</h2>
+      <p>We use limited technical information to:</p>
+      <ul>
+        <li>Operate and maintain the app</li>
+        <li>Provide features and services you choose to use</li>
+        <li>Deliver notifications</li>
+        <li>Manage subscriptions and access to paid features</li>
+        <li>Improve performance and reliability</li>
+        <li>Detect and prevent abuse, fraud, or technical issues</li>
+      </ul>
 
-      <h2>The paid tier</h2>
-      <p>If you subscribe to Cactus Watch Plus, Apple's App Store (through RevenueCat) handles your card details. We never see them. We receive only a subscriber identifier and a paid/not-paid status. To deliver the push alerts you turn on, we ask for notification permission at that moment, and you can revoke it in iOS Settings any time.</p>
+      <h2>Third-Party Service Providers</h2>
+      <p>We use third-party service providers to support the operation of the app, including services related to hosting, infrastructure, data storage, analytics, crash reporting, push notifications, and subscription management.</p>
+      <p>These providers may process limited technical information on our behalf to help operate and maintain the app. Their processing of information is subject to their own privacy policies and applicable contractual obligations.</p>
 
-      <h2>Third parties</h2>
-      <p>We use Google Firebase for crash reporting (Crashlytics), push-notification delivery (Cloud Messaging), and storing your saved alert preferences (Firestore); RevenueCat for subscription management; Mapbox for the map tiles shown on the Plus map; and DigitalOcean (servers) and Cloudflare (DNS/CDN) for hosting. We do not use Google Analytics for advertising, Facebook Pixel, Mixpanel, Segment, or any cross-app ad-tracking SDK, and we do not sell your data to anyone.</p>
+      <h2>Data Sharing</h2>
+      <p>We do not sell personal data.</p>
+      <p>We may share limited technical information with service providers as described in this policy, or if required by law, regulation, legal process, or governmental request, or when necessary to protect the rights, safety, and security of our users and services.</p>
 
-      <h2>Data we attribute</h2>
-      <p>Phoenix Fire incident data comes from the City of Phoenix Fire Department public ArcGIS endpoint, used under the City <a href="https://www.phoenixopendata.com" target="_blank" rel="noopener">Open Data Policy</a>. We poll once per minute, cache it for our users, and add attribution in the app. We are not affiliated with the City of Phoenix.</p>
+      <h2>Children's Privacy</h2>
+      <p>We do not knowingly collect personal data from children under the age of 13.</p>
 
-      <h2>Children</h2>
-      <p>Cactus Watch is not directed at children under 13 and we do not knowingly collect data from them. The app shows public safety incidents, which can include sensitive content; parental discretion is advised.</p>
+      <h2>Security</h2>
+      <p>We use reasonable technical and organizational measures to help protect the data we process. However, no system can be guaranteed to be completely secure.</p>
+      <p>We retain technical information only as long as necessary to fulfill the purposes described in this policy.</p>
 
-      <h2>Changes to this policy</h2>
-      <p>If we ever change what we collect, we will update this page and bump the Effective date above. For material changes that affect existing users (extremely unlikely given our data minimization), we will surface an in-app notice.</p>
+      <h2>Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. For material changes, we will provide notice within the app or by reasonable means. Updates will be posted with a revised effective date. Continued use of the app after changes are posted indicates acceptance of the updated policy.</p>
 
       <h2>Contact</h2>
-      <p>Questions, complaints, or data deletion requests: <a href="mailto:support@cactuswatch.com">support@cactuswatch.com</a>. We respond within 7 days.</p>
+      <p>If you have questions about this Privacy Policy, contact <a href="mailto:support@cactuswatch.com">support@cactuswatch.com</a>.</p>
     </article>
   </main>
 

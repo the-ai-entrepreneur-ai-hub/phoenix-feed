@@ -17,8 +17,11 @@ import (
 )
 
 const (
-	cactusDisclaimer       = "Not for emergency use; call 911"
-	cactusAttribution      = "Data via City of Phoenix Fire Department"
+	cactusDisclaimer = "Not for emergency use; call 911"
+	// Attribution intentionally empty: the client only renders a non-empty
+	// attribution, and Dan wants no source-agency naming anywhere user-facing.
+	// The terms page covers it generically ("public dispatch data sources").
+	cactusAttribution      = ""
 	activeRefreshMinSecond = 60
 )
 

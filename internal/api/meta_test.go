@@ -20,8 +20,10 @@ func TestActiveMetaForFreeClient(t *testing.T) {
 	if meta["disclaimer"] != "Not for emergency use; call 911" {
 		t.Fatalf("disclaimer = %v", meta["disclaimer"])
 	}
-	if meta["attribution"] != "Data via City of Phoenix Fire Department" {
-		t.Fatalf("attribution = %v", meta["attribution"])
+	// Attribution is intentionally empty (omitted via omitempty): no
+	// source-agency naming is allowed anywhere user-facing.
+	if _, present := meta["attribution"]; present {
+		t.Fatalf("attribution should be omitted, got %v", meta["attribution"])
 	}
 	if meta["refresh_min_seconds"] != float64(60) {
 		t.Fatalf("refresh_min_seconds = %v", meta["refresh_min_seconds"])

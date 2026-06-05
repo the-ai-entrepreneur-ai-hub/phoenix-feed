@@ -69,6 +69,10 @@ write_landing_security_headers() {
 		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
 		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self' mailto:"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		# No-cache so app WebViews and browsers revalidate every load (ETag
+		# 304s keep it cheap). Without this, iOS WKWebView heuristically
+		# caches pages for days and users see stale legal/about copy.
+		Cache-Control "no-cache, must-revalidate"
 		>Server "cactus-watch"
 		-Via
 	}

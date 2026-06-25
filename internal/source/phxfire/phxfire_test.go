@@ -229,6 +229,28 @@ func TestParseFeatures_RejectsImplausibleCoords(t *testing.T) {
 	}
 }
 
+func TestParseFeatures_DropsZeroOrEpochDate(t *testing.T) {
+	// A missing/zero upstream Date must not become a 1970/2000 placeholder
+	// (which the app renders as "01/01/00"). Such half-formed features are
+	// dropped at parse time; they reappear once a real dispatch time exists.
+	body := `{"features":[
+		{"attributes":{"Incident":"OK","Nature":"WF","Date":1777884118000},"geometry":{"x":-112.1,"y":33.5}},
+		{"attributes":{"Incident":"ZERO","Nature":"WF","Date":0},"geometry":{"x":-112.2,"y":33.6}},
+		{"attributes":{"Incident":"EPOCH","Nature":"WF","Date":1},"geometry":{"x":-112.3,"y":33.7}},
+		{"attributes":{"Incident":"NEG","Nature":"WF","Date":-5},"geometry":{"x":-112.4,"y":33.8}}
+	]}`
+	incs, err := ParseFeatures([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(incs) != 1 {
+		t.Fatalf("want only the valid-date incident kept, got %d: %#v", len(incs), incs)
+	}
+	if incs[0].IncidentID != "OK" {
+		t.Errorf("kept wrong incident: %q", incs[0].IncidentID)
+	}
+}
+
 func TestPoll_UsesASCIIUserAgent(t *testing.T) {
 	var gotUA string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

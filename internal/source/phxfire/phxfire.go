@@ -266,6 +266,15 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 			continue
 		}
 
+		dispatchedAt := time.UnixMilli(f.Attributes.Date).UTC()
+		// Drop half-formed calls whose upstream Date is missing/zero. Converting
+		// a zero epoch yields a bogus 1970/2000 timestamp that the app renders
+		// as "01/01/00 00:00". Such a feature reappears on a later poll once a
+		// real dispatch time is assigned.
+		if f.Attributes.Date <= 0 || dispatchedAt.Year() < 2020 {
+			continue
+		}
+
 		featureBytes, _ := json.Marshal(f) // best effort; safe to ignore err
 
 		natureCode := strings.TrimSpace(f.Attributes.Nature)
@@ -282,7 +291,7 @@ func ParseFeatures(body []byte) ([]model.Incident, error) {
 			LocationText: strings.TrimSpace(f.Attributes.GenLocInfo),
 			Lon:          f.Geometry.X,
 			Lat:          f.Geometry.Y,
-			IncidentDate: time.UnixMilli(f.Attributes.Date).UTC(),
+			IncidentDate: dispatchedAt,
 			Raw:          featureBytes,
 		})
 	}

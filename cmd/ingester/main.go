@@ -93,8 +93,11 @@ func pickSource() source.Source {
 }
 
 func capBackoff(d time.Duration) time.Duration {
-	if d > 5*time.Minute {
-		return 5 * time.Minute
+	// Cap error backoff at 90s so a transient upstream blip never leaves the
+	// feed stale for minutes. We poll Phoenix at most ~1/min and the source has
+	// no published rate limit, so a short cap stays well within polite bounds.
+	if d > 90*time.Second {
+		return 90 * time.Second
 	}
 	return d
 }

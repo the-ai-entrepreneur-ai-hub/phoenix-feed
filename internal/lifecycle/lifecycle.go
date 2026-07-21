@@ -31,17 +31,19 @@ func New(s *store.Store, clearAfterMisses int, log *slog.Logger) *Manager {
 //  3. Mark non-observed incidents as missing (idempotent).
 //  4. Sweep incidents that have hit the consecutive-miss threshold to cleared.
 //
-// On a failed poll we ONLY record the source_polls row. Failed polls never
-// advance the clearing state — that was the whole point of the Codex fix.
+// On a failed or degraded poll we ONLY record the source_polls row.
+// Non-authoritative polls never advance the clearing state.
 func (m *Manager) Apply(ctx context.Context, r model.PollResult) error {
 	if !r.Success() {
 		pollID, err := m.store.RecordPoll(ctx, r)
 		if err != nil {
 			return err
 		}
-		m.log.Warn("poll failed",
+		m.log.Warn("poll not authoritative",
 			"source", r.Source,
 			"status", r.StatusCode,
+			"classification", r.Classification,
+			"reason", r.Reason,
 			"err", errString(r.Err),
 			"poll_id", pollID)
 		return nil

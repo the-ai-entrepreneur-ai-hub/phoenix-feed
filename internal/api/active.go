@@ -54,7 +54,10 @@ func writeActiveIncidents(w http.ResponseWriter, r *http.Request, st Store, cfg 
 		result.Meta.ParserVersion = cfg.DefaultParserVersion
 	}
 	enrichActiveIncidents(result.Incidents)
-	applyActiveIncidentFreshnessMeta(&result.Meta, apiNow(cfg), result.Incidents)
+	now := apiNow(cfg)
+	applyActiveIncidentFreshnessMeta(&result.Meta, now, result.Incidents)
+	applySourceStatus(&result.Meta, now, cfg)
+	applyIncidentAuthority(result.Meta, result.Incidents)
 	applyCactusMeta(&result.Meta, auth.IdentityFromContext(r.Context()), cfg.RateLimiter, scope)
 
 	writeJSON(w, http.StatusOK, result)

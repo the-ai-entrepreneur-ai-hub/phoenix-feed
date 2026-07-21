@@ -48,7 +48,11 @@ func main() {
 		FireStationsURL:      cfg.FireStationsURL,
 		PaidTierEnabled:      cfg.PaidTierEnabled,
 		Sources:              []string{phxfire.SourceName},
-		StaleAfter:           10 * time.Minute,
+		StaleAfter:           cfg.SourceDownAfter,
+		SourceDegradedAfter:  cfg.SourceDegradedAfter,
+		SourceDownAfter:      cfg.SourceDownAfter,
+		SourceDownFailures:   cfg.SourceDownFailures,
+		FrozenDownAfter:      cfg.FrozenDownAfter,
 	}, log)
 
 	// TODO: /v1/incidents/{source}/{id}, /v1/incidents/history (paid),

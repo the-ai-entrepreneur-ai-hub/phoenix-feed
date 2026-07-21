@@ -31,6 +31,7 @@ func TestIncidentDetailFound(t *testing.T) {
 				Lon:          -111.84006,
 				Lat:          33.40284,
 				IncidentDate: incidentDate,
+				LastSeenAt:   lastSuccess,
 			},
 			UnitHistory: []store.UnitObservation{{
 				Unit:            "E2203",
@@ -86,6 +87,12 @@ func TestIncidentDetailFound(t *testing.T) {
 	}
 	if body.Meta["data_staleness_seconds"] != float64(3600) {
 		t.Fatalf("data_staleness_seconds = %v", body.Meta["data_staleness_seconds"])
+	}
+	if body.Meta["source_status"] != "down" || body.Incident["is_last_known"] != true {
+		t.Fatalf("outage detail = meta=%#v incident=%#v", body.Meta, body.Incident)
+	}
+	if body.Incident["last_confirmed_at"] != "2026-05-04T10:01:00Z" {
+		t.Fatalf("last_confirmed_at = %v", body.Incident["last_confirmed_at"])
 	}
 }
 

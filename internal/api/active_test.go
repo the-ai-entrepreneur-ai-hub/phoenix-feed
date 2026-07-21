@@ -183,6 +183,73 @@ func TestActiveIncidentsMetaUsesNewestReturnedIncidentDate(t *testing.T) {
 	}
 }
 
+func TestActiveIncidentsReturnsLastKnownDataWhenSourceDown(t *testing.T) {
+	now := time.Date(2026, 7, 21, 12, 0, 0, 0, time.UTC)
+	lastSuccess := now.Add(-11 * time.Minute)
+	lastAttempt := now.Add(-time.Minute)
+	confirmed := lastSuccess
+	st := &fakeStore{activeResult: store.ActiveIncidentsResult{
+		Meta: store.StalenessMeta{
+			SourceLastSuccessAt:       &lastSuccess,
+			SourceLastAttemptAt:       &lastAttempt,
+			SourceConsecutiveFailures: 3,
+			LatestPollClassification:  string(model.PollFailure),
+			LatestPollReason:          "contract_invalid",
+		},
+		Incidents: []store.ActiveIncident{{
+			Source: "phoenix-fire-mapserver", IncidentID: "F1", Units: []model.Unit{},
+			IncidentDate: now.Add(-time.Hour), LastSeenAt: confirmed,
+		}},
+	}}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	Router(st, Config{Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body struct {
+		Meta      map[string]any   `json:"meta"`
+		Incidents []map[string]any `json:"incidents"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Meta["source_status"] != "down" || body.Meta["source_status_reason"] != "contract_invalid" {
+		t.Fatalf("source state = %v/%v", body.Meta["source_status"], body.Meta["source_status_reason"])
+	}
+	if body.Meta["source_last_attempt_at"] != "2026-07-21T11:59:00Z" || body.Meta["source_consecutive_failures"] != float64(3) {
+		t.Fatalf("source diagnostics = %#v", body.Meta)
+	}
+	if len(body.Incidents) != 1 || body.Incidents[0]["is_last_known"] != true || body.Incidents[0]["last_confirmed_at"] != "2026-07-21T11:49:00Z" {
+		t.Fatalf("retained incident = %#v", body.Incidents)
+	}
+}
+
+func TestActiveIncidentsNeverSucceededIsDownWithNullableAges(t *testing.T) {
+	st := &fakeStore{activeResult: store.ActiveIncidentsResult{
+		Incidents: []store.ActiveIncident{},
+	}}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/incidents/active", nil)
+	Router(st, Config{}, slog.Default()).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rr.Code, rr.Body.String())
+	}
+	var body struct {
+		Meta map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Meta["source_status"] != "down" || body.Meta["source_status_reason"] != "never_succeeded" {
+		t.Fatalf("source state = %#v", body.Meta)
+	}
+	if body.Meta["source_last_success_at"] != nil || body.Meta["source_last_attempt_at"] != nil || body.Meta["data_age_seconds"] != nil {
+		t.Fatalf("never-success timestamps must be null: %#v", body.Meta)
+	}
+}
+
 func TestActiveIncidentsMetaStalenessIsZeroWhenNewestEqualsNow(t *testing.T) {
 	now := time.Date(2026, 5, 26, 1, 0, 0, 0, time.UTC)
 	st := &fakeStore{

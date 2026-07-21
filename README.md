@@ -129,6 +129,12 @@ curl -H "X-API-Key: <api-key>" http://localhost:8080/v1/incidents/active
 - `POLL_INTERVAL` — ingester cadence, default `60s`.
 - `POLL_JITTER` — cadence jitter, default `10s`.
 - `CLEAR_AFTER_MISSES` — successful absent polls before clearing, default `5`.
+- `SOURCE_DEGRADED_AFTER` — authoritative-success age that reports `degraded`, default `3m`.
+- `SOURCE_DOWN_AFTER` — authoritative-success age that reports `down`, default `10m`.
+- `SOURCE_DOWN_FAILURES` — consecutive failed source polls that report `down`, default `3`.
+- `FROZEN_REPEAT_COUNT` — identical non-empty snapshots before degradation, default `3`.
+- `FROZEN_DOWN_AFTER` — unchanged non-empty duration before `down`, default `10m`.
+- `SUDDEN_COLLAPSE_PERCENT` — feature-count drop requiring an independent count probe, default `80`.
 - `RAW_RETENTION` — raw JSONB retention, default `720h`.
 - `PAID_TIER_ENABLED` — paid placeholder gate, default `false`.
 - `LOG_LEVEL` — `debug`, `info`, `warn`, or `error`.

@@ -1,6 +1,10 @@
 x-app-env: &app-env
   DATABASE_URL: ${DATABASE_URL}
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  SOURCE_DEGRADED_AFTER: ${SOURCE_DEGRADED_AFTER:-3m}
+  SOURCE_DOWN_AFTER: ${SOURCE_DOWN_AFTER:-10m}
+  SOURCE_DOWN_FAILURES: ${SOURCE_DOWN_FAILURES:-3}
+  FROZEN_DOWN_AFTER: ${FROZEN_DOWN_AFTER:-10m}
 
 x-logging: &default-logging
   driver: json-file
@@ -57,6 +61,8 @@ services:
       POLL_INTERVAL: ${POLL_INTERVAL:-60s}
       POLL_JITTER: ${POLL_JITTER:-10s}
       CLEAR_AFTER_MISSES: ${CLEAR_AFTER_MISSES:-5}
+      FROZEN_REPEAT_COUNT: ${FROZEN_REPEAT_COUNT:-3}
+      SUDDEN_COLLAPSE_PERCENT: ${SUDDEN_COLLAPSE_PERCENT:-80}
     depends_on:
       db:
         condition: service_healthy

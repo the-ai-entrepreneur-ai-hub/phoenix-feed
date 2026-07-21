@@ -218,16 +218,28 @@ func stalenessMetaSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
+			"source_status": map[string]any{
+				"type": "string", "enum": []string{"ok", "degraded", "down"},
+			},
+			"source_status_reason": map[string]any{
+				"type": "string", "enum": []string{"healthy", "recent_failures", "success_overdue", "contract_invalid", "snapshot_incomplete", "payload_frozen", "never_succeeded"},
+			},
+			"source_last_attempt_at": map[string]any{
+				"type": "string", "format": "date-time", "nullable": true,
+			},
+			"source_consecutive_failures": map[string]any{
+				"type": "integer", "minimum": 0,
+			},
 			"source_last_success_at": map[string]any{
 				"type":        "string",
 				"format":      "date-time",
 				"nullable":    true,
-				"description": "Timestamp of the latest successful upstream scrape.",
+				"description": "Timestamp of the latest authoritative upstream snapshot.",
 			},
 			"data_age_seconds": map[string]any{
 				"type":        "integer",
 				"nullable":    true,
-				"description": "Seconds since the latest successful upstream scrape.",
+				"description": "Seconds since the latest authoritative upstream snapshot.",
 			},
 			"newest_incident_at": map[string]any{
 				"type":        "string",

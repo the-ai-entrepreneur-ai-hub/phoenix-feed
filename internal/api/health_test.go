@@ -129,6 +129,35 @@ func TestHealthDownWhenSourceIsStale(t *testing.T) {
 	if body["state"] != "down" {
 		t.Fatalf("state = %v", body["state"])
 	}
+	sources := body["sources"].(map[string]any)
+	phoenix := sources["phoenix-fire-mapserver"].(map[string]any)
+	if phoenix["source_status"] != "down" || phoenix["source_status_reason"] != "success_overdue" {
+		t.Fatalf("source diagnostics = %#v", phoenix)
+	}
+}
+
+func TestHealthDownAfterThreeFailuresIncludesAttemptDiagnostics(t *testing.T) {
+	now := time.Date(2026, 7, 21, 12, 0, 0, 0, time.UTC)
+	lastSuccess := now.Add(-2 * time.Minute)
+	lastAttempt := now.Add(-10 * time.Second)
+	st := &fakeStore{sourceHealth: []store.SourceHealth{{
+		Source: "phoenix-fire-mapserver", LastSuccessAt: &lastSuccess, LastAttemptAt: &lastAttempt,
+		ConsecutiveFailures: 3, LatestClassification: "failure", LatestReason: "contract_invalid",
+	}}}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	Router(st, Config{Sources: []string{"phoenix-fire-mapserver"}, Now: func() time.Time { return now }}, slog.Default()).ServeHTTP(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	phoenix := body["sources"].(map[string]any)["phoenix-fire-mapserver"].(map[string]any)
+	if phoenix["source_status_reason"] != "contract_invalid" || phoenix["last_attempt_at"] != "2026-07-21T11:59:50Z" || phoenix["consecutive_failures"] != float64(3) {
+		t.Fatalf("source diagnostics = %#v", phoenix)
+	}
 }
 
 func TestHealthDownWhenDatabasePingFails(t *testing.T) {

@@ -152,4 +152,9 @@ func TestOpenAPIEndpointDocumentsRoutes(t *testing.T) {
 	if _, ok := properties["data_staleness_seconds"]; !ok {
 		t.Fatal("data_staleness_seconds missing from StalenessMeta schema")
 	}
+	for _, field := range []string{"source_status", "source_status_reason", "source_last_attempt_at", "source_consecutive_failures"} {
+		if _, ok := properties[field]; !ok {
+			t.Fatalf("%s missing from StalenessMeta schema", field)
+		}
+	}
 }

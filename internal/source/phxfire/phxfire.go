@@ -19,7 +19,9 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/abusedmindset/phoenix-feed/internal/model"
@@ -90,6 +92,26 @@ var unitTypePrefixes = []struct {
 type Client struct {
 	queryURL   string
 	httpClient *http.Client
+	policy     Policy
+	now        func() time.Time
+
+	mu                     sync.Mutex
+	lastPayloadSHA         string
+	repeatedPayloads       int
+	unchangedSince         time.Time
+	lastAuthoritativeCount int
+}
+
+type Policy struct {
+	FrozenRepeatCount     int
+	SuddenCollapsePercent int
+}
+
+func DefaultPolicy() Policy {
+	return Policy{
+		FrozenRepeatCount:     3,
+		SuddenCollapsePercent: 80,
+	}
 }
 
 // New returns a Client configured with sane defaults.
@@ -97,7 +119,20 @@ func New() *Client {
 	return &Client{
 		queryURL:   defaultQueryURL,
 		httpClient: &http.Client{Timeout: defaultTimeout},
+		policy:     DefaultPolicy(),
+		now:        func() time.Time { return time.Now().UTC() },
 	}
+}
+
+func NewWithPolicy(policy Policy) *Client {
+	c := New()
+	if policy.FrozenRepeatCount >= 2 {
+		c.policy.FrozenRepeatCount = policy.FrozenRepeatCount
+	}
+	if policy.SuddenCollapsePercent >= 1 && policy.SuddenCollapsePercent <= 100 {
+		c.policy.SuddenCollapsePercent = policy.SuddenCollapsePercent
+	}
+	return c
 }
 
 // DefaultQueryURL returns the production ArcGIS query URL.
@@ -118,6 +153,11 @@ func (c *Client) WithURL(u string) *Client {
 	return c
 }
 
+func (c *Client) withNow(now func() time.Time) *Client {
+	c.now = now
+	return c
+}
+
 // Name implements source.Source.
 func (c *Client) Name() string { return SourceName }
 
@@ -126,16 +166,19 @@ func (c *Client) ParserVersion() string { return ParserVersion }
 
 // Poll fetches and parses the active incidents feed.
 func (c *Client) Poll(ctx context.Context) model.PollResult {
+	startedAt := c.now().UTC()
 	res := model.PollResult{
-		Source:        SourceName,
-		RequestURL:    c.queryURL,
-		StartedAt:     time.Now().UTC(),
-		ParserVersion: ParserVersion,
+		Source:         SourceName,
+		RequestURL:     c.queryURL,
+		StartedAt:      startedAt,
+		ParserVersion:  ParserVersion,
+		Classification: model.PollFailure,
+		Reason:         "recent_failures",
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.queryURL, nil)
 	if err != nil {
-		res.FinishedAt = time.Now().UTC()
+		res.FinishedAt = c.now().UTC()
 		res.Err = fmt.Errorf("build request: %w", err)
 		return res
 	}
@@ -143,7 +186,7 @@ func (c *Client) Poll(ctx context.Context) model.PollResult {
 	req.Header.Set("User-Agent", defaultUserAgent)
 
 	resp, err := c.httpClient.Do(req)
-	res.FinishedAt = time.Now().UTC()
+	res.FinishedAt = c.now().UTC()
 	res.LatencyMS = int(res.FinishedAt.Sub(res.StartedAt).Milliseconds())
 	if err != nil {
 		res.Err = fmt.Errorf("http: %w", err)
@@ -166,34 +209,204 @@ func (c *Client) Poll(ctx context.Context) model.PollResult {
 	sum := sha256.Sum256(body)
 	res.PayloadSHA256 = hex.EncodeToString(sum[:])
 
-	incidents, err := ParseFeatures(body)
+	incidents, featureCount, classification, reason, err := validateSnapshot(body)
+	res.Classification = classification
+	res.Reason = reason
 	if err != nil {
-		res.Err = fmt.Errorf("parse: %w", err)
+		res.Err = err
 		return res
 	}
 	res.Incidents = incidents
+
+	if classification == model.PollAuthoritativeSuccess && c.requiresCountConfirmation(featureCount) {
+		count, countErr := c.fetchCount(ctx)
+		if countErr != nil || count != featureCount {
+			res.Classification = model.PollDegradedSnapshot
+			res.Reason = "snapshot_incomplete"
+			if countErr != nil {
+				res.Err = nil
+			}
+			return res
+		}
+	}
+
+	c.classifyPayloadHistory(&res, featureCount)
 	return res
+}
+
+func (c *Client) requiresCountConfirmation(featureCount int) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if featureCount == 0 {
+		return true
+	}
+	if c.lastAuthoritativeCount <= 0 {
+		return false
+	}
+	remainingPercent := 100 - c.policy.SuddenCollapsePercent
+	return featureCount*100 <= c.lastAuthoritativeCount*remainingPercent
+}
+
+func (c *Client) fetchCount(ctx context.Context) (int, error) {
+	u, err := url.Parse(c.queryURL)
+	if err != nil {
+		return 0, fmt.Errorf("count URL: %w", err)
+	}
+	q := u.Query()
+	q.Set("returnCountOnly", "true")
+	q.Set("returnGeometry", "false")
+	q.Del("outFields")
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return 0, fmt.Errorf("count request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", defaultUserAgent)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("count HTTP: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 0, fmt.Errorf("count status %d", resp.StatusCode)
+	}
+	var payload struct {
+		Count *int            `json:"count"`
+		Error json.RawMessage `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return 0, fmt.Errorf("count parse: %w", err)
+	}
+	if len(payload.Error) > 0 && string(payload.Error) != "null" {
+		return 0, errors.New("count returned ArcGIS error")
+	}
+	if payload.Count == nil || *payload.Count < 0 {
+		return 0, errors.New("count response missing a valid count")
+	}
+	return *payload.Count, nil
+}
+
+func (c *Client) classifyPayloadHistory(res *model.PollResult, featureCount int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if res.Classification != model.PollAuthoritativeSuccess {
+		return
+	}
+	if featureCount == 0 {
+		c.lastPayloadSHA = ""
+		c.repeatedPayloads = 0
+		c.unchangedSince = time.Time{}
+		c.lastAuthoritativeCount = 0
+		return
+	}
+
+	if res.PayloadSHA256 == c.lastPayloadSHA {
+		c.repeatedPayloads++
+	} else {
+		c.lastPayloadSHA = res.PayloadSHA256
+		c.repeatedPayloads = 1
+		c.unchangedSince = res.StartedAt
+	}
+	unchangedSince := c.unchangedSince
+	res.UnchangedSince = &unchangedSince
+
+	if c.repeatedPayloads >= c.policy.FrozenRepeatCount {
+		res.Classification = model.PollDegradedSnapshot
+		res.Reason = "payload_frozen"
+		return
+	}
+	c.lastAuthoritativeCount = featureCount
+}
+
+type responseEnvelope struct {
+	Features              json.RawMessage `json:"features"`
+	Error                 json.RawMessage `json:"error"`
+	ExceededTransferLimit bool            `json:"exceededTransferLimit"`
+	GeometryType          string          `json:"geometryType"`
+	SpatialReference      struct {
+		WKID       int `json:"wkid"`
+		LatestWKID int `json:"latestWkid"`
+	} `json:"spatialReference"`
+	Fields []struct {
+		Name string `json:"name"`
+	} `json:"fields"`
+}
+
+func validateSnapshot(body []byte) ([]model.Incident, int, model.PollClassification, string, error) {
+	var envelope responseEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, 0, model.PollFailure, "contract_invalid", fmt.Errorf("parse: %w", err)
+	}
+	if len(envelope.Error) > 0 && string(envelope.Error) != "null" {
+		return nil, 0, model.PollFailure, "contract_invalid", errors.New("parse: ArcGIS error response")
+	}
+	if len(envelope.Features) == 0 || string(envelope.Features) == "null" {
+		return nil, 0, model.PollFailure, "contract_invalid", errors.New("parse: missing features array")
+	}
+	var features []json.RawMessage
+	if err := json.Unmarshal(envelope.Features, &features); err != nil {
+		return nil, 0, model.PollFailure, "contract_invalid", errors.New("parse: features must be an array")
+	}
+
+	incidents, err := ParseFeatures(body)
+	if err != nil {
+		return nil, 0, model.PollFailure, "contract_invalid", fmt.Errorf("parse: %w", err)
+	}
+	if envelope.ExceededTransferLimit {
+		return incidents, len(features), model.PollDegradedSnapshot, "snapshot_incomplete", nil
+	}
+	if !hasExpectedContract(envelope) {
+		return incidents, len(features), model.PollDegradedSnapshot, "contract_invalid", nil
+	}
+	if len(incidents) != len(features) {
+		return incidents, len(features), model.PollDegradedSnapshot, "snapshot_incomplete", nil
+	}
+	return incidents, len(features), model.PollAuthoritativeSuccess, "healthy", nil
+}
+
+func hasExpectedContract(envelope responseEnvelope) bool {
+	if envelope.GeometryType != "esriGeometryPoint" {
+		return false
+	}
+	if envelope.SpatialReference.WKID != 4326 && envelope.SpatialReference.LatestWKID != 4326 {
+		return false
+	}
+	actual := make(map[string]struct{}, len(envelope.Fields))
+	for _, field := range envelope.Fields {
+		actual[field.Name] = struct{}{}
+	}
+	for _, expected := range expectedFields {
+		if _, ok := actual[expected]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // rawResponse is the ESRI feature JSON shape we care about.
 type rawResponse struct {
-	Features []struct {
-		Attributes struct {
-			OBJECTID   int64  `json:"OBJECTID"`
-			Incident   string `json:"Incident"`
-			Nature     string `json:"Nature"`
-			NatureDesc string `json:"NatureDesc"`
-			Units      string `json:"Units"`
-			Channel    string `json:"Channel"`
-			SymbolCode string `json:"SymbolCode"`
-			Date       int64  `json:"Date"` // epoch ms
-			GenLocInfo string `json:"GenLocInfo"`
-		} `json:"attributes"`
-		Geometry struct {
-			X float64 `json:"x"`
-			Y float64 `json:"y"`
-		} `json:"geometry"`
-	} `json:"features"`
+	Features []rawFeature `json:"features"`
+}
+
+type rawFeature struct {
+	Attributes struct {
+		OBJECTID   int64  `json:"OBJECTID"`
+		Incident   string `json:"Incident"`
+		Nature     string `json:"Nature"`
+		NatureDesc string `json:"NatureDesc"`
+		Units      string `json:"Units"`
+		Channel    string `json:"Channel"`
+		SymbolCode string `json:"SymbolCode"`
+		Date       int64  `json:"Date"` // epoch ms
+		GenLocInfo string `json:"GenLocInfo"`
+	} `json:"attributes"`
+	Geometry struct {
+		X float64 `json:"x"`
+		Y float64 `json:"y"`
+	} `json:"geometry"`
 }
 
 type CodeInfo struct {

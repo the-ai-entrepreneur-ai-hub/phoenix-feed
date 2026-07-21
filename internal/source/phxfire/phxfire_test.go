@@ -3,8 +3,11 @@ package phxfire
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +15,13 @@ import (
 )
 
 const sampleResponse = `{
+	"geometryType": "esriGeometryPoint",
+	"spatialReference": {"wkid": 4326},
+	"fields": [
+		{"name":"OBJECTID"},{"name":"Incident"},{"name":"Nature"},
+		{"name":"NatureDesc"},{"name":"Units"},{"name":"Channel"},
+		{"name":"SymbolCode"},{"name":"Date"},{"name":"GenLocInfo"}
+	],
 	"features": [
 		{
 			"attributes": {
@@ -303,6 +313,193 @@ func TestPoll_RoundTrip(t *testing.T) {
 	if res.ParserVersion != ParserVersion {
 		t.Errorf("parser version not set")
 	}
+}
+
+func TestPollRejectsNonAuthoritativeResponses(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     int
+		body       string
+		wantClass  model.PollClassification
+		wantReason string
+		wantErr    bool
+	}{
+		{name: "non-2xx", status: 503, body: `{}`, wantClass: model.PollFailure, wantReason: "recent_failures", wantErr: true},
+		{name: "malformed JSON", status: 200, body: `{`, wantClass: model.PollFailure, wantReason: "contract_invalid", wantErr: true},
+		{name: "ArcGIS soft error", status: 200, body: `{"error":{"code":500,"message":"down"}}`, wantClass: model.PollFailure, wantReason: "contract_invalid", wantErr: true},
+		{name: "missing features", status: 200, body: `{}`, wantClass: model.PollFailure, wantReason: "contract_invalid", wantErr: true},
+		{name: "null features", status: 200, body: `{"features":null}`, wantClass: model.PollFailure, wantReason: "contract_invalid", wantErr: true},
+		{name: "truncated", status: 200, body: fullContractPayload(`[]`, `,"exceededTransferLimit":true`), wantClass: model.PollDegradedSnapshot, wantReason: "snapshot_incomplete"},
+		{name: "schema drift", status: 200, body: `{"geometryType":"esriGeometryPoint","spatialReference":{"wkid":4326},"fields":[],"features":[]}`, wantClass: model.PollDegradedSnapshot, wantReason: "contract_invalid"},
+		{name: "spatial drift", status: 200, body: strings.Replace(sampleResponse, `"wkid": 4326`, `"wkid": 2868`, 1), wantClass: model.PollDegradedSnapshot, wantReason: "contract_invalid"},
+		{name: "critical feature rejected", status: 200, body: fullContractPayload(`[{"attributes":{"Incident":"","Date":1777884118000},"geometry":{"x":-112.1,"y":33.5}}]`, ``), wantClass: model.PollDegradedSnapshot, wantReason: "snapshot_incomplete"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer srv.Close()
+			res := New().WithURL(srv.URL).Poll(context.Background())
+			if res.Classification != tt.wantClass || res.Reason != tt.wantReason {
+				t.Fatalf("classification/reason = %s/%s, want %s/%s (err=%v)", res.Classification, res.Reason, tt.wantClass, tt.wantReason, res.Err)
+			}
+			if (res.Err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr=%v", res.Err, tt.wantErr)
+			}
+			if res.Success() {
+				t.Fatal("non-authoritative response reported success")
+			}
+		})
+	}
+}
+
+func TestPollTimeoutIsFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		_, _ = w.Write([]byte(sampleResponse))
+	}))
+	defer srv.Close()
+	c := New().WithURL(srv.URL)
+	c.httpClient.Timeout = 5 * time.Millisecond
+	res := c.Poll(context.Background())
+	if res.Classification != model.PollFailure || !errors.Is(res.Err, context.DeadlineExceeded) {
+		t.Fatalf("timeout result = %#v", res)
+	}
+}
+
+func TestPollEmptyRequiresIndependentCountZero(t *testing.T) {
+	for _, count := range []int{0, 1} {
+		t.Run(fmt.Sprintf("count_%d", count), func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("returnCountOnly") == "true" {
+					_, _ = fmt.Fprintf(w, `{"count":%d}`, count)
+					return
+				}
+				_, _ = w.Write([]byte(productionSuccessResponse))
+			}))
+			defer srv.Close()
+			res := New().WithURL(srv.URL).Poll(context.Background())
+			if count == 0 && !res.Success() {
+				t.Fatalf("confirmed empty failed: class=%s reason=%s err=%v", res.Classification, res.Reason, res.Err)
+			}
+			if count != 0 && (res.Classification != model.PollDegradedSnapshot || res.Reason != "snapshot_incomplete") {
+				t.Fatalf("mismatched empty = %s/%s", res.Classification, res.Reason)
+			}
+		})
+	}
+}
+
+func TestPollEmptyRejectsMalformedCountConfirmation(t *testing.T) {
+	for _, countBody := range []string{`{}`, `{"count":-1}`, `{"error":{"code":500}}`} {
+		t.Run(countBody, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("returnCountOnly") == "true" {
+					_, _ = w.Write([]byte(countBody))
+					return
+				}
+				_, _ = w.Write([]byte(productionSuccessResponse))
+			}))
+			defer srv.Close()
+
+			res := New().WithURL(srv.URL).Poll(context.Background())
+			if res.Classification != model.PollDegradedSnapshot || res.Reason != "snapshot_incomplete" || res.Success() {
+				t.Fatalf("malformed count accepted: %s/%s err=%v", res.Classification, res.Reason, res.Err)
+			}
+		})
+	}
+}
+
+func TestPollFrozenNonEmptyAndChangedRecovery(t *testing.T) {
+	now := time.Date(2026, 7, 21, 9, 0, 0, 0, time.UTC)
+	body := sampleResponse
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+	c := New().WithURL(srv.URL).withNow(func() time.Time { return now })
+
+	for i := 1; i <= 3; i++ {
+		res := c.Poll(context.Background())
+		if i < 3 && !res.Success() {
+			t.Fatalf("repeat %d unexpectedly non-authoritative: %s/%s", i, res.Classification, res.Reason)
+		}
+		if i == 3 && (res.Classification != model.PollDegradedSnapshot || res.Reason != "payload_frozen") {
+			t.Fatalf("third repeat = %s/%s", res.Classification, res.Reason)
+		}
+		now = now.Add(time.Minute)
+	}
+
+	body = strings.Replace(sampleResponse, "F26198635", "F26198636", 1)
+	res := c.Poll(context.Background())
+	if !res.Success() {
+		t.Fatalf("changed payload did not recover: %s/%s err=%v", res.Classification, res.Reason, res.Err)
+	}
+}
+
+func TestPollSuddenCollapseRequiresMatchingCount(t *testing.T) {
+	features := make([]string, 0, 5)
+	for i := 0; i < 5; i++ {
+		features = append(features, fmt.Sprintf(`{"attributes":{"Incident":"F%d","Nature":"WF","Date":1777884118000},"geometry":{"x":-112.%d,"y":33.5}}`, i, i+1))
+	}
+	body := fullContractPayload(`[`+strings.Join(features, ",")+`]`, ``)
+	count := 5
+	countCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("returnCountOnly") == "true" {
+			countCalls++
+			_, _ = fmt.Fprintf(w, `{"count":%d}`, count)
+			return
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+	c := New().WithURL(srv.URL)
+	if res := c.Poll(context.Background()); !res.Success() {
+		t.Fatalf("baseline poll failed: %s/%s err=%v", res.Classification, res.Reason, res.Err)
+	}
+
+	body = fullContractPayload(`[`+features[0]+`]`, ``)
+	count = 1
+	if res := c.Poll(context.Background()); !res.Success() {
+		t.Fatalf("confirmed collapse failed: %s/%s err=%v", res.Classification, res.Reason, res.Err)
+	}
+	if countCalls != 1 {
+		t.Fatalf("count calls = %d, want 1", countCalls)
+	}
+
+	body = fullContractPayload(`[]`, ``)
+	count = 2
+	res := c.Poll(context.Background())
+	if res.Classification != model.PollDegradedSnapshot || res.Reason != "snapshot_incomplete" {
+		t.Fatalf("count mismatch = %s/%s", res.Classification, res.Reason)
+	}
+}
+
+func TestPollConfirmedEmptyIsExemptFromFrozenDetection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("returnCountOnly") == "true" {
+			_, _ = w.Write([]byte(`{"count":0}`))
+			return
+		}
+		_, _ = w.Write([]byte(productionSuccessResponse))
+	}))
+	defer srv.Close()
+	c := New().WithURL(srv.URL)
+	for i := 0; i < 5; i++ {
+		if res := c.Poll(context.Background()); !res.Success() {
+			t.Fatalf("empty repeat %d = %s/%s err=%v", i+1, res.Classification, res.Reason, res.Err)
+		}
+	}
+}
+
+func fullContractPayload(features, extra string) string {
+	return `{"geometryType":"esriGeometryPoint","spatialReference":{"wkid":4326},"fields":[` +
+		`{"name":"OBJECTID"},{"name":"Incident"},{"name":"Nature"},{"name":"NatureDesc"},` +
+		`{"name":"Units"},{"name":"Channel"},{"name":"SymbolCode"},{"name":"Date"},{"name":"GenLocInfo"}],` +
+		`"features":` + features + extra + `}`
 }
 
 func isASCII(s string) bool {

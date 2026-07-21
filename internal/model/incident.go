@@ -4,6 +4,14 @@ package model
 
 import "time"
 
+type PollClassification string
+
+const (
+	PollAuthoritativeSuccess PollClassification = "authoritative_success"
+	PollDegradedSnapshot     PollClassification = "degraded_snapshot"
+	PollFailure              PollClassification = "failure"
+)
+
 // Incident is the parser-normalized view of a single feature from any source.
 // Source-specific quirks (HTML entities, weird whitespace, native projections)
 // are resolved before this struct is constructed.
@@ -31,21 +39,29 @@ type Unit struct {
 
 // PollResult is what a Source returns from one fetch attempt.
 type PollResult struct {
-	Source        string
-	RequestURL    string
-	StartedAt     time.Time
-	FinishedAt    time.Time
-	StatusCode    int
-	LatencyMS     int
-	Incidents     []Incident
-	PayloadSHA256 string
-	ParserVersion string
-	Err           error // non-nil on transport / parse failure
+	Source         string
+	RequestURL     string
+	StartedAt      time.Time
+	FinishedAt     time.Time
+	StatusCode     int
+	LatencyMS      int
+	Incidents      []Incident
+	PayloadSHA256  string
+	ParserVersion  string
+	Classification PollClassification
+	Reason         string
+	UnchangedSince *time.Time
+	Err            error // non-nil on transport / parse failure
 }
 
 // Success returns true when the poll round-tripped cleanly and the parser
 // produced a feature set the caller can trust. Only successful polls count
 // toward the lifecycle clearing rule.
 func (r PollResult) Success() bool {
-	return r.Err == nil && r.StatusCode >= 200 && r.StatusCode < 300
+	if r.Err != nil || r.StatusCode < 200 || r.StatusCode >= 300 {
+		return false
+	}
+	// Empty preserves compatibility with sources/tests created before poll
+	// authority was explicit. New adapters always set a classification.
+	return r.Classification == "" || r.Classification == PollAuthoritativeSuccess
 }

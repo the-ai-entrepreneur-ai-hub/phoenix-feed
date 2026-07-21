@@ -48,15 +48,23 @@ type RecentIncidentFilter struct {
 }
 
 type StalenessMeta struct {
-	SourceLastSuccessAt  *time.Time `json:"source_last_success_at"`
-	DataAgeSeconds       *int       `json:"data_age_seconds"`
-	NewestIncidentAt     *time.Time `json:"newest_incident_at"`
-	DataStalenessSeconds *int       `json:"data_staleness_seconds"`
-	ParserVersion        string     `json:"parser_version"`
-	Disclaimer           string     `json:"disclaimer,omitempty"`
-	Attribution          string     `json:"attribution,omitempty"`
-	RefreshMinSeconds    int        `json:"refresh_min_seconds,omitempty"`
-	Tier                 string     `json:"tier,omitempty"`
+	SourceLastSuccessAt       *time.Time `json:"source_last_success_at"`
+	SourceStatus              string     `json:"source_status"`
+	SourceStatusReason        string     `json:"source_status_reason"`
+	SourceLastAttemptAt       *time.Time `json:"source_last_attempt_at"`
+	SourceConsecutiveFailures int        `json:"source_consecutive_failures"`
+	DataAgeSeconds            *int       `json:"data_age_seconds"`
+	NewestIncidentAt          *time.Time `json:"newest_incident_at"`
+	DataStalenessSeconds      *int       `json:"data_staleness_seconds"`
+	ParserVersion             string     `json:"parser_version"`
+	Disclaimer                string     `json:"disclaimer,omitempty"`
+	Attribution               string     `json:"attribution,omitempty"`
+	RefreshMinSeconds         int        `json:"refresh_min_seconds,omitempty"`
+	Tier                      string     `json:"tier,omitempty"`
+	LatestPollClassification  string     `json:"-"`
+	LatestPollReason          string     `json:"-"`
+	LatestUnchangedSince      *time.Time `json:"-"`
+	LatestFeatureCount        *int       `json:"-"`
 }
 
 type ActiveIncident struct {
@@ -74,6 +82,8 @@ type ActiveIncident struct {
 	IncidentDate         time.Time    `json:"incident_date"`
 	ReceivedAt           time.Time    `json:"received_at"`
 	LastSeenAt           time.Time    `json:"last_seen_at"`
+	LastConfirmedAt      time.Time    `json:"last_confirmed_at"`
+	IsLastKnown          bool         `json:"is_last_known"`
 	SourceLastSuccessAt  *time.Time   `json:"source_last_success_at,omitempty"`
 	SecondsSinceLastSeen int          `json:"seconds_since_last_seen"`
 }
@@ -132,22 +142,24 @@ type DispatchTranscriptHealth struct {
 }
 
 type IncidentDetail struct {
-	Source       string       `json:"source"`
-	IncidentID   string       `json:"incident_id"`
-	NatureCode   string       `json:"nature_code,omitempty"`
-	NatureDesc   string       `json:"nature_desc,omitempty"`
-	Severity     string       `json:"severity,omitempty"`
-	Units        []model.Unit `json:"units"`
-	Channel      string       `json:"channel,omitempty"`
-	SymbolCode   string       `json:"symbol_code,omitempty"`
-	LocationText string       `json:"location_text,omitempty"`
-	Lon          float64      `json:"lon"`
-	Lat          float64      `json:"lat"`
-	IncidentDate time.Time    `json:"incident_date"`
-	ReceivedAt   time.Time    `json:"received_at"`
-	LastSeenAt   time.Time    `json:"last_seen_at"`
-	ClearedAt    *time.Time   `json:"cleared_at,omitempty"`
-	ReopenCount  int          `json:"reopen_count"`
+	Source          string       `json:"source"`
+	IncidentID      string       `json:"incident_id"`
+	NatureCode      string       `json:"nature_code,omitempty"`
+	NatureDesc      string       `json:"nature_desc,omitempty"`
+	Severity        string       `json:"severity,omitempty"`
+	Units           []model.Unit `json:"units"`
+	Channel         string       `json:"channel,omitempty"`
+	SymbolCode      string       `json:"symbol_code,omitempty"`
+	LocationText    string       `json:"location_text,omitempty"`
+	Lon             float64      `json:"lon"`
+	Lat             float64      `json:"lat"`
+	IncidentDate    time.Time    `json:"incident_date"`
+	ReceivedAt      time.Time    `json:"received_at"`
+	LastSeenAt      time.Time    `json:"last_seen_at"`
+	LastConfirmedAt time.Time    `json:"last_confirmed_at"`
+	IsLastKnown     bool         `json:"is_last_known"`
+	ClearedAt       *time.Time   `json:"cleared_at,omitempty"`
+	ReopenCount     int          `json:"reopen_count"`
 }
 
 type UnitObservation struct {
@@ -193,10 +205,16 @@ type CanaryHealth struct {
 }
 
 type SourceHealth struct {
-	Source        string
-	LastSuccessAt *time.Time
-	ParserVersion string
-	Canary        *CanaryHealth
+	Source               string
+	LastSuccessAt        *time.Time
+	LastAttemptAt        *time.Time
+	ConsecutiveFailures  int
+	LatestClassification string
+	LatestReason         string
+	LatestUnchangedSince *time.Time
+	LatestFeatureCount   *int
+	ParserVersion        string
+	Canary               *CanaryHealth
 }
 
 type ContractCanaryResult struct {
@@ -247,15 +265,27 @@ func (s *Store) recordPoll(ctx context.Context, r model.PollResult, success bool
 		INSERT INTO source_polls (
 			source, request_url, started_at, finished_at, status_code,
 			latency_ms, feature_count, payload_sha256, parser_version,
-			success, error
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''),$9,$10,NULLIF($11,''))
+			success, error, notes
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''),$9,$10,NULLIF($11,''),$12::jsonb)
 		RETURNING poll_id`
+	notes, err := json.Marshal(struct {
+		Classification model.PollClassification `json:"classification"`
+		Reason         string                   `json:"reason"`
+		UnchangedSince *time.Time               `json:"unchanged_since,omitempty"`
+	}{
+		Classification: r.Classification,
+		Reason:         r.Reason,
+		UnchangedSince: r.UnchangedSince,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("encode poll diagnostics: %w", err)
+	}
 
 	var id int64
-	err := s.pool.QueryRow(ctx, q,
+	err = s.pool.QueryRow(ctx, q,
 		r.Source, r.RequestURL, r.StartedAt, r.FinishedAt, r.StatusCode,
 		r.LatencyMS, len(r.Incidents), r.PayloadSHA256, r.ParserVersion,
-		success, errStr,
+		success, errStr, string(notes),
 	).Scan(&id)
 	return id, err
 }
@@ -351,6 +381,7 @@ func (s *Store) ListActiveIncidents(ctx context.Context, filter ActiveIncidentFi
 				inc.Units = []model.Unit{}
 			}
 		}
+		inc.LastConfirmedAt = inc.LastSeenAt
 		incidents = append(incidents, inc)
 	}
 	if err := rows.Err(); err != nil {
@@ -419,6 +450,7 @@ func (s *Store) ListRecentIncidents(ctx context.Context, filter RecentIncidentFi
 				inc.Units = []model.Unit{}
 			}
 		}
+		inc.LastConfirmedAt = inc.LastSeenAt
 		result.TotalCount = totalCount
 		result.Incidents = append(result.Incidents, inc)
 	}
@@ -576,25 +608,78 @@ func (s *Store) DispatchTranscriptHealth(ctx context.Context, now time.Time) (Di
 }
 
 func (s *Store) activeStalenessMeta(ctx context.Context) (StalenessMeta, error) {
+	return s.sourcePollMeta(ctx, phxfire.SourceName)
+}
+
+func (s *Store) sourcePollMeta(ctx context.Context, source string) (StalenessMeta, error) {
 	const q = `
-		SELECT started_at, parser_version FROM source_polls
-		WHERE success = TRUE
-		ORDER BY started_at DESC LIMIT 1`
-	var started time.Time
-	var parserVersion string
-	err := s.pool.QueryRow(ctx, q).Scan(&started, &parserVersion)
-	if err == pgx.ErrNoRows {
-		return StalenessMeta{}, nil
-	}
-	if err != nil {
+		WITH last_success AS (
+			SELECT started_at, parser_version
+			FROM source_polls
+			WHERE source = $1 AND success = TRUE
+			ORDER BY started_at DESC LIMIT 1
+		), last_attempt AS (
+			SELECT started_at, success, notes, feature_count
+			FROM source_polls
+			WHERE source = $1 AND error IS DISTINCT FROM 'poll apply pending'
+			ORDER BY started_at DESC LIMIT 1
+		)
+		SELECT ls.started_at, ls.parser_version, la.started_at,
+		       COALESCE(NULLIF(la.notes->>'classification', ''), CASE WHEN la.success THEN 'authoritative_success' ELSE 'failure' END),
+		       COALESCE(NULLIF(la.notes->>'reason', ''), CASE WHEN la.success THEN 'healthy' ELSE 'recent_failures' END),
+		       NULLIF(la.notes->>'unchanged_since', '')::timestamptz,
+		       la.feature_count,
+		       (SELECT COUNT(*)::int
+		        FROM source_polls p
+		        WHERE p.source = $1
+		          AND p.poll_id > COALESCE((
+		              SELECT MAX(p2.poll_id)
+		              FROM source_polls p2
+		              WHERE p2.source = $1
+		                AND p2.error IS DISTINCT FROM 'poll apply pending'
+		                AND COALESCE(NULLIF(p2.notes->>'classification', ''), CASE WHEN p2.success THEN 'authoritative_success' ELSE 'failure' END) <> 'failure'
+		          ), 0)
+		          AND p.success = FALSE
+		          AND p.error IS DISTINCT FROM 'poll apply pending'
+		          AND COALESCE(NULLIF(p.notes->>'classification', ''), 'failure') = 'failure')
+		FROM (SELECT 1) seed
+		LEFT JOIN last_success ls ON TRUE
+		LEFT JOIN last_attempt la ON TRUE`
+
+	var lastSuccess, lastAttempt, unchangedSince sql.NullTime
+	var parserVersion, classification, reason sql.NullString
+	var failures int
+	var featureCount sql.NullInt64
+	if err := s.pool.QueryRow(ctx, q, source).Scan(
+		&lastSuccess, &parserVersion, &lastAttempt, &classification, &reason, &unchangedSince, &featureCount, &failures,
+	); err != nil {
 		return StalenessMeta{}, err
 	}
-	age := int(math.Max(0, time.Since(started).Seconds()))
-	return StalenessMeta{
-		SourceLastSuccessAt: &started,
-		DataAgeSeconds:      &age,
-		ParserVersion:       parserVersion,
-	}, nil
+	meta := StalenessMeta{
+		SourceConsecutiveFailures: failures,
+		ParserVersion:             nullString(parserVersion),
+		LatestPollClassification:  nullString(classification),
+		LatestPollReason:          nullString(reason),
+	}
+	if lastSuccess.Valid {
+		t := lastSuccess.Time.UTC()
+		meta.SourceLastSuccessAt = &t
+		age := int(math.Max(0, time.Since(t).Seconds()))
+		meta.DataAgeSeconds = &age
+	}
+	if lastAttempt.Valid {
+		t := lastAttempt.Time.UTC()
+		meta.SourceLastAttemptAt = &t
+	}
+	if unchangedSince.Valid {
+		t := unchangedSince.Time.UTC()
+		meta.LatestUnchangedSince = &t
+	}
+	if featureCount.Valid {
+		count := int(featureCount.Int64)
+		meta.LatestFeatureCount = &count
+	}
+	return meta, nil
 }
 
 func nullableString(value string) any {
@@ -679,6 +764,7 @@ func (s *Store) getIncident(ctx context.Context, source, incidentID string) (*In
 			inc.Units = []model.Unit{}
 		}
 	}
+	inc.LastConfirmedAt = inc.LastSeenAt
 	return &inc, nil
 }
 
@@ -865,25 +951,18 @@ func (s *Store) SourceHealth(ctx context.Context, sources []string) ([]SourceHea
 	out := make([]SourceHealth, 0, len(sources))
 	for _, source := range sources {
 		row := SourceHealth{Source: source}
-
-		var lastSuccess sql.NullTime
-		var parserVersion sql.NullString
-		err := s.pool.QueryRow(ctx, `
-			SELECT started_at, parser_version
-			FROM source_polls
-			WHERE source = $1 AND success = TRUE
-			ORDER BY started_at DESC
-			LIMIT 1`, source,
-		).Scan(&lastSuccess, &parserVersion)
-		if err != nil && err != pgx.ErrNoRows {
-			return nil, fmt.Errorf("latest source success %s: %w", source, err)
+		meta, err := s.sourcePollMeta(ctx, source)
+		if err != nil {
+			return nil, fmt.Errorf("source poll health %s: %w", source, err)
 		}
-		if lastSuccess.Valid {
-			row.LastSuccessAt = &lastSuccess.Time
-		}
-		if parserVersion.Valid {
-			row.ParserVersion = parserVersion.String
-		}
+		row.LastSuccessAt = meta.SourceLastSuccessAt
+		row.LastAttemptAt = meta.SourceLastAttemptAt
+		row.ConsecutiveFailures = meta.SourceConsecutiveFailures
+		row.LatestClassification = meta.LatestPollClassification
+		row.LatestReason = meta.LatestPollReason
+		row.LatestUnchangedSince = meta.LatestUnchangedSince
+		row.LatestFeatureCount = meta.LatestFeatureCount
+		row.ParserVersion = meta.ParserVersion
 
 		var checkedAt sql.NullTime
 		var passed sql.NullBool

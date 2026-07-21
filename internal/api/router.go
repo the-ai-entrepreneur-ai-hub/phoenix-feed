@@ -37,6 +37,10 @@ type Config struct {
 	PaidTierEnabled        bool
 	Sources                []string
 	StaleAfter             time.Duration
+	SourceDegradedAfter    time.Duration
+	SourceDownAfter        time.Duration
+	SourceDownFailures     int
+	FrozenDownAfter        time.Duration
 	RateLimiter            *ratelimit.Limiter
 	Now                    func() time.Time
 }

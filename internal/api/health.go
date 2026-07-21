@@ -8,8 +8,6 @@ import (
 	"github.com/abusedmindset/phoenix-feed/internal/store"
 )
 
-const defaultStaleAfter = 10 * time.Minute
-
 type healthResponse struct {
 	State       string                          `json:"state"`
 	DBReachable bool                            `json:"db_reachable"`
@@ -18,8 +16,13 @@ type healthResponse struct {
 }
 
 type sourceHealthResponse struct {
+	Status              string                `json:"source_status"`
+	StatusReason        string                `json:"source_status_reason"`
 	LastSuccessAt       *time.Time            `json:"last_success_at"`
+	LastAttemptAt       *time.Time            `json:"last_attempt_at"`
 	SecondsSinceSuccess *int                  `json:"seconds_since_success"`
+	ConsecutiveFailures int                   `json:"consecutive_failures"`
+	FeatureCount        *int                  `json:"feature_count"`
 	ParserVersion       string                `json:"parser_version"`
 	Canary              *canaryHealthResponse `json:"canary,omitempty"`
 }
@@ -33,10 +36,6 @@ type canaryHealthResponse struct {
 func healthHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		now := apiNow(cfg)
-		staleAfter := cfg.StaleAfter
-		if staleAfter == 0 {
-			staleAfter = defaultStaleAfter
-		}
 
 		dbOK := st.Ping(r.Context()) == nil
 		sourceRows, err := st.SourceHealth(r.Context(), cfg.Sources)
@@ -57,14 +56,14 @@ func healthHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 		}
 
 		for _, source := range sourceRows {
-			row := buildSourceHealthResponse(source, now)
+			row := buildSourceHealthResponse(source, now, cfg)
 			body.Sources[source.Source] = row
 
-			if source.LastSuccessAt == nil || now.Sub(*source.LastSuccessAt) > staleAfter {
+			if row.Status == sourceStatusDown {
 				body.State = "down"
 				continue
 			}
-			if body.State != "down" && source.Canary != nil && source.Canary.Passed != nil && !*source.Canary.Passed {
+			if body.State != "down" && row.Status == sourceStatusDegraded {
 				body.State = "degraded"
 			}
 		}
@@ -77,19 +76,31 @@ func healthHandler(st Store, cfg Config, log *slog.Logger) http.HandlerFunc {
 	}
 }
 
-func buildSourceHealthResponse(source store.SourceHealth, now time.Time) sourceHealthResponse {
+func buildSourceHealthResponse(source store.SourceHealth, now time.Time, cfg Config) sourceHealthResponse {
 	var seconds *int
 	if source.LastSuccessAt != nil {
-		v := int(now.Sub(*source.LastSuccessAt).Seconds())
-		if v < 0 {
-			v = 0
-		}
+		v := elapsedSeconds(now, *source.LastSuccessAt)
 		seconds = &v
+	}
+	degradedAfter, downAfter, downFailures, frozenDownAfter := sourceThresholds(cfg)
+	status, reason := classifySourceStatus(
+		now, source.LastSuccessAt, source.ConsecutiveFailures,
+		source.LatestClassification, source.LatestReason, source.LatestUnchangedSince,
+		degradedAfter, downAfter, downFailures, frozenDownAfter,
+	)
+	if status == sourceStatusOK && source.Canary != nil && source.Canary.Passed != nil && !*source.Canary.Passed {
+		status = sourceStatusDegraded
+		reason = "contract_invalid"
 	}
 
 	row := sourceHealthResponse{
+		Status:              status,
+		StatusReason:        reason,
 		LastSuccessAt:       source.LastSuccessAt,
+		LastAttemptAt:       source.LastAttemptAt,
 		SecondsSinceSuccess: seconds,
+		ConsecutiveFailures: source.ConsecutiveFailures,
+		FeatureCount:        source.LatestFeatureCount,
 		ParserVersion:       source.ParserVersion,
 	}
 	if source.Canary != nil {

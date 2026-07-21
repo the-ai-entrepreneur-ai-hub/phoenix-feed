@@ -13,6 +13,7 @@ import (
 
 	"github.com/abusedmindset/phoenix-feed/internal/config"
 	"github.com/abusedmindset/phoenix-feed/internal/lifecycle"
+	"github.com/abusedmindset/phoenix-feed/internal/model"
 	"github.com/abusedmindset/phoenix-feed/internal/source"
 	"github.com/abusedmindset/phoenix-feed/internal/source/phxfire"
 	"github.com/abusedmindset/phoenix-feed/internal/store"
@@ -34,7 +35,7 @@ func main() {
 	}
 	defer st.Close()
 
-	src := pickSource()
+	src := pickSource(cfg)
 	mgr := lifecycle.New(st, cfg.ClearAfterMisses, log)
 
 	log.Info("ingester starting",
@@ -77,6 +78,10 @@ func main() {
 		switch {
 		case res.Success():
 			backoff = 0
+		case res.Classification == model.PollDegradedSnapshot:
+			// Soft/contract failures need the normal polling cadence so health
+			// transitions and recovery are observed promptly.
+			backoff = 0
 		case res.StatusCode == 429 || res.StatusCode == 403:
 			log.Warn("rate-limited or forbidden, escalating backoff", "status", res.StatusCode)
 			backoff = capBackoff(backoff*2 + 30*time.Second)
@@ -86,10 +91,13 @@ func main() {
 	}
 }
 
-func pickSource() source.Source {
+func pickSource(cfg config.Config) source.Source {
 	// Today: only Phoenix Fire MapServer. When scanner+Whisper lands, this
 	// becomes a switch on $SOURCE_NAME and returns one of N implementations.
-	return phxfire.New()
+	return phxfire.NewWithPolicy(phxfire.Policy{
+		FrozenRepeatCount:     cfg.FrozenRepeatCount,
+		SuddenCollapsePercent: cfg.SuddenCollapsePct,
+	})
 }
 
 func capBackoff(d time.Duration) time.Duration {

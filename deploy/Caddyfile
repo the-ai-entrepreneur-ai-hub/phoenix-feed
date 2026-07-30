@@ -3,4 +3,21 @@
 	order rate_limit before reverse_proxy
 }
 
-import /tmp/phoenix-feed-site.caddy
+# Every product on this box drops its own <name>-site.caddy here and it is
+# picked up automatically. The entrypoint writes phoenix-feed-site.caddy;
+# VistaScan's API, which shares this droplet, supplies vistascan-site.caddy.
+#
+# A glob rather than one literal import per product, for two reasons.
+#
+# The route used to be added by editing this file directly on the server, so it
+# lived as an uncommitted modification that any `git pull --ff-only` or
+# `git checkout` would silently drop, taking VistaScan's only public route with
+# it.
+#
+# More importantly, a literal import of a missing file is a hard adapter error,
+# not a warning, and this container's /tmp does not survive recreation. A
+# recreate would therefore leave Caddy unable to start at all, taking down
+# cactuswatch.com as collateral for a neighbour's missing file. A glob that
+# matches nothing logs a warning and carries on, so the worst case is the
+# missing site 404ing while everything else stays up.
+import /tmp/*-site.caddy

@@ -2,33 +2,23 @@
 
 ## SSH Access
 
-Production SSH listens on TCP 2200 and accepts the existing root key.
+Production is the DigitalOcean droplet `cactus-watch-prod-v2` at `64.23.209.182` (sfo3), shared with VistaScan. `feed.cactuswatch.com` and `cactuswatch.com` both resolve to it. SSH listens on the default port 22, key-only (`PermitRootLogin prohibit-password`, no password auth). The Mac ssh config has an alias for it:
 
 ```bash
-ssh -i ~/.ssh/id_rsa -p 2200 root@64.23.147.218
+ssh vistascan-droplet
+# equivalent to: ssh -i ~/.ssh/vistascan_do root@64.23.209.182
 ```
 
-Port 22 is intentionally closed. Password authentication is disabled, and root login is limited to key-based access with `PermitRootLogin prohibit-password`.
-
-On Ubuntu 24.04, `ssh.socket` is active by default. When changing the SSH port, bind the socket on IPv4 explicitly before restarting it:
-
-```ini
-[Socket]
-ListenStream=
-ListenStream=0.0.0.0:2200
-ListenStream=[::]:2200
-```
-
-Always test a new SSH session on 2200 before removing any previous listener or firewall allowance.
+The earlier `64.23.147.218:2200` host in this document was the retired `cactus-watch-prod` droplet; do not use it.
 
 ## Firewall
 
-UFW should allow only:
+UFW allows only:
 
 ```text
+22/tcp
 80/tcp
 443/tcp
-2200/tcp
 ```
 
 Verify from the droplet:
